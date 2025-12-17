@@ -1,0 +1,217 @@
+---
+description: Rust coding standards
+globs: "**/*.rs"
+---
+
+# Rust Standards
+
+## Style
+
+- **Formatter**: `rustfmt` (automatic)
+- **Linter**: `clippy`
+- **Edition**: 2021
+
+```bash
+# Format
+cargo fmt
+
+# Lint
+cargo clippy -- -D warnings
+
+# Check
+cargo check --all
+```
+
+## Naming
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| Functions/Variables | snake_case | `process_data()` |
+| Types/Traits | PascalCase | `DataProcessor` |
+| Constants | SCREAMING_SNAKE_CASE | `MAX_RETRIES` |
+| Modules | snake_case | `data_processor` |
+| Lifetimes | short lowercase | `'a`, `'ctx` |
+
+```rust
+// ✅ Good
+pub struct UserStore {
+    connection: DbConnection,
+}
+
+impl UserStore {
+    pub fn new(connection: DbConnection) -> Self {
+        Self { connection }
+    }
+    
+    pub fn get_user(&self, id: UserId) -> Result<User, Error> {
+        // ...
+    }
+}
+```
+
+## Error Handling
+
+```rust
+// ✅ Use Result for fallible operations
+pub fn process(input: &str) -> Result<Output, ProcessError> {
+    let parsed = parse(input)?;
+    Ok(transform(parsed))
+}
+
+// ✅ Use thiserror for error types
+#[derive(Debug, thiserror::Error)]
+pub enum ProcessError {
+    #[error("failed to parse input: {0}")]
+    Parse(#[from] ParseError),
+    
+    #[error("validation failed: {reason}")]
+    Validation { reason: String },
+}
+
+// ✅ Use anyhow for applications
+fn main() -> anyhow::Result<()> {
+    let config = load_config()?;
+    run(config)?;
+    Ok(())
+}
+```
+
+## Modules
+
+- One module per file or directory
+- Use `mod.rs` or `module_name.rs` (prefer latter)
+- Re-export with `pub use` in lib.rs
+
+```rust
+// lib.rs
+pub mod config;
+pub mod processor;
+
+pub use config::Config;
+pub use processor::{Processor, ProcessorBuilder};
+```
+
+## Testing
+
+```rust
+// Unit tests in same file
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_process_valid_input() {
+        let result = process("valid").unwrap();
+        assert_eq!(result.status, Status::Success);
+    }
+    
+    #[test]
+    fn test_process_invalid_input() {
+        let result = process("invalid");
+        assert!(result.is_err());
+    }
+}
+
+// Integration tests in tests/ directory
+// tests/integration_test.rs
+use my_crate::Processor;
+
+#[test]
+fn test_full_workflow() {
+    let processor = Processor::new();
+    // ...
+}
+```
+
+```bash
+# Run tests
+cargo test
+
+# With output
+cargo test -- --nocapture
+
+# Specific test
+cargo test test_process
+
+# Doc tests
+cargo test --doc
+```
+
+## Dependencies
+
+```bash
+# Add dependency
+cargo add serde --features derive
+
+# Add dev dependency
+cargo add --dev proptest
+
+# Update
+cargo update
+```
+
+## Documentation
+
+```rust
+//! Crate-level documentation.
+//!
+//! # Examples
+//!
+//! ```rust
+//! use my_crate::Processor;
+//!
+//! let processor = Processor::new();
+//! let result = processor.run()?;
+//! ```
+
+/// Process the input data.
+///
+/// # Arguments
+///
+/// * `input` - The data to process
+///
+/// # Returns
+///
+/// The processed output or an error.
+///
+/// # Errors
+///
+/// Returns `ProcessError::Parse` if input is malformed.
+///
+/// # Examples
+///
+/// ```rust
+/// let output = process("data")?;
+/// ```
+pub fn process(input: &str) -> Result<Output, ProcessError> {
+    // ...
+}
+```
+
+## Bevy-Specific (for game crates)
+
+```rust
+// ✅ Use SystemSet for ordering
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum MySystemSet {
+    Input,
+    Update,
+    Render,
+}
+
+// ✅ Use App builder pattern
+impl Plugin for MyPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, my_system.in_set(MySystemSet::Update));
+    }
+}
+
+// ✅ Query with proper filters
+fn my_system(
+    query: Query<(&Transform, &Velocity), With<Player>>,
+) {
+    for (transform, velocity) in &query {
+        // ...
+    }
+}
+```

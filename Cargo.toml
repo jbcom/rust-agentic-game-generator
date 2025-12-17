@@ -1,0 +1,18 @@
+[workspace]
+members = []
+resolver = "2"
+
+[workspace.package]
+authors = ["Jon Bogaty <jon@jonbogaty.com>"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/jbcom/rust-vintage-game-generator"
+
+[workspace.dependencies]
+# Core dependencies - to be added as crates are migrated
+bevy = { version = "0.16", default-features = false }
+async-openai = "0.21"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+anyhow = "1.0"
+thiserror = "1.0"
