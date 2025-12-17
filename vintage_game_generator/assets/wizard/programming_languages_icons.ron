@@ -1,0 +1,38 @@
+(
+    image_size: (
+        width: 1680,
+        height: 800,
+    ),
+    hotspots: [
+        (
+            id: "python",
+            bounds: (
+                x_min: 200,
+                y_min: 350,
+                x_max: 480,
+                y_max: 700,
+            ),
+            label: "Python - Easy to learn, rapid prototyping",
+        ),
+        (
+            id: "rust",
+            bounds: (
+                x_min: 600,
+                y_min: 200,
+                x_max: 950,
+                y_max: 550,
+            ),
+            label: "Rust - Fast, safe, and modern",
+        ),
+        (
+            id: "ruby",
+            bounds: (
+                x_min: 1100,
+                y_min: 350,
+                x_max: 1400,
+                y_max: 650,
+            ),
+            label: "Ruby - Elegant and expressive",
+        ),
+    ],
+)

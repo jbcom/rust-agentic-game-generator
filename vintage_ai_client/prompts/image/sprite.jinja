@@ -1,0 +1,21 @@
+16-bit pixel art {{ sprite_type }} sprite: {{ description }}
+
+CRITICAL: Match the exact style, colors, and proportions of the reference style guide.
+
+Requirements:
+- Resolution: Fits within {{ max_width }}x{{ max_height }} pixels
+- Color palette: Use ONLY the established {{ max_colors }}-color palette
+- Shading: {{ shading_technique }} technique
+- Outline: {{ outline_style }}
+- Perspective: {{ perspective }}
+- Style: {{ visual_style }}
+
+{% if animation_frame %}
+Animation frame: {{ animation_frame }}
+{% endif %}
+
+{% if facing_direction %}
+Facing direction: {{ facing_direction }}
+{% endif %}
+
+Pure pixel art with hard edges, no anti-aliasing or soft gradients.

@@ -1,0 +1,80 @@
+(
+    image_size: (
+        width: 1024,
+        height: 1024,
+    ),
+    hotspots: [
+        (
+            id: "guided",
+            bounds: (
+                x_min: 0,
+                y_min: 0,
+                x_max: 511,
+                y_max: 1023,
+            ),
+            label: "Guided - Structured learning with clear objectives",
+        ),
+        (
+            id: "freeform",
+            bounds: (
+                x_min: 512,
+                y_min: 0,
+                x_max: 1023,
+                y_max: 1023,
+            ),
+            label: "Freeform - Creative exploration without boundaries",
+        ),
+    ],
+    text_areas: [
+        (
+            id: "left_top",
+            bounds: (
+                x_min: 20,
+                y_min: 20,
+                x_max: 400,
+                y_max: 120,
+            ),
+            description: "Header area for Guided mode title/description",
+        ),
+        (
+            id: "right_top",
+            bounds: (
+                x_min: 624,
+                y_min: 20,
+                x_max: 1004,
+                y_max: 120,
+            ),
+            description: "Header area for Freeform mode title/description",
+        ),
+        (
+            id: "left_bottom",
+            bounds: (
+                x_min: 20,
+                y_min: 900,
+                x_max: 400,
+                y_max: 1004,
+            ),
+            description: "Footer area for Guided mode call-to-action",
+        ),
+        (
+            id: "right_bottom",
+            bounds: (
+                x_min: 624,
+                y_min: 900,
+                x_max: 1004,
+                y_max: 1004,
+            ),
+            description: "Footer area for Freeform mode call-to-action",
+        ),
+        (
+            id: "center_divider",
+            bounds: (
+                x_min: 412,
+                y_min: 450,
+                x_max: 612,
+                y_max: 574,
+            ),
+            description: "Central area around brain split for vs/or text",
+        ),
+    ],
+)

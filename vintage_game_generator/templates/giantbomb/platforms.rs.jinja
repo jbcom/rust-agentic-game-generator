@@ -1,0 +1,81 @@
+//! Platform information and functions
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlatformInfo {
+    pub id: u32,
+    pub name: &'static str,
+    pub abbreviation: Option<&'static str>,
+    pub deck: Option<&'static str>,
+    pub install_base: Option<u64>,
+    pub original_price: Option<&'static str>,
+    pub release_date: Option<&'static str>,
+    pub online_support: Option<bool>,
+}
+
+/// Platform information for correlation and context
+pub const PLATFORM_INFO: &[PlatformInfo] = &[
+{%- for platform in platforms %}
+    PlatformInfo {
+        id: {{ platform.id }},
+        name: r#"{{ platform.name }}"#,
+        abbreviation: {% if platform.abbreviation %}Some(r#"{{ platform.abbreviation }}"#){% else %}None{% endif %},
+        deck: {% if platform.deck %}Some(r#"{{ platform.deck }}"#){% else %}None{% endif %},
+        install_base: {% if platform.install_base %}Some({{ platform.install_base }}){% else %}None{% endif %},
+        original_price: {% if platform.original_price %}Some(r#"{{ platform.original_price }}"#){% else %}None{% endif %},
+        release_date: {% if platform.release_date %}Some(r#"{{ platform.release_date }}"#){% else %}None{% endif %},
+        online_support: {% if platform.online_support %}Some({{ platform.online_support }}){% else %}None{% endif %},
+    }{% if not loop.last %},{% endif %}
+{%- endfor %}
+];
+
+/// Get platform info by name
+pub fn get_platform_info(name: &str) -> Option<&'static PlatformInfo> {
+    PLATFORM_INFO.iter()
+        .find(|p| p.name.eq_ignore_ascii_case(name) || 
+                  p.abbreviation.as_ref().map_or(false, |abbr| abbr.eq_ignore_ascii_case(name)))
+}
+
+/// Get platforms sorted by install base
+pub fn platforms_by_popularity() -> Vec<&'static PlatformInfo> {
+    let mut platforms: Vec<&'static PlatformInfo> = PLATFORM_INFO.iter().collect();
+    platforms.sort_by(|a, b| {
+        let a_base = a.install_base.unwrap_or(0);
+        let b_base = b.install_base.unwrap_or(0);
+        b_base.cmp(&a_base)
+    });
+    platforms
+}
+
+/// Get platforms from a specific era
+pub fn platforms_by_release_year(start_year: i32, end_year: i32) -> Vec<&'static PlatformInfo> {
+    PLATFORM_INFO.iter()
+        .filter(|p| {
+            if let Some(date_str) = p.release_date {
+                // Parse year from date string (format: "YYYY-MM-DD HH:MM:SS")
+                if let Some(year_str) = date_str.split('-').next() {
+                    if let Ok(year) = year_str.parse::<i32>() {
+                        return year >= start_year && year <= end_year;
+                    }
+                }
+            }
+            false
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_platform_lookup() {
+        // Test that we can find platforms by name and abbreviation
+        let nes = get_platform_info("NES");
+        assert!(nes.is_some());
+        
+        let genesis = get_platform_info("Genesis");
+        assert!(genesis.is_some());
+    }
+}

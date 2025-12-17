@@ -1,0 +1,91 @@
+{# Style Guide Generation Template #}
+Create a comprehensive visual style guide for {{ config.name }}, a {{ config.genre }} game set in {{ config.setting }}.
+
+Reference games: {{ config.reference_games | join(", ") }}
+
+# VISUAL STYLE GUIDE
+
+## Color Palette
+Define EXACT color palettes with RGB values:
+
+### Primary Palette (Environment)
+- List 6-8 colors for terrain, buildings, nature
+- Include hex codes and RGB values
+- Specify usage for each color
+
+### Character Palette  
+- List 8-12 colors for sprites and portraits
+- Include skin tones, hair colors, clothing
+- Specify which colors can be used together
+
+### UI Palette
+- List 4-6 colors for menus and HUD
+- Include text colors, borders, backgrounds
+- Ensure readability on CRT displays
+
+### Effect Palette
+- List 6-8 colors for magic, particles, lighting
+- Include transparency rules
+
+## Sprite Specifications
+
+### Character Sprites
+- Size: {{ config.art_style.sprite_size }}x{{ config.art_style.sprite_size }} pixels
+- Outline: {{ config.art_style.outline.thickness }}px {{ config.art_style.outline.color }}
+- Animation frames:
+  - Idle: 2 frames
+  - Walk: 4 frames per direction
+  - Attack: 3 frames
+  - Cast: 4 frames
+  - Hurt: 2 frames
+
+### Tile Specifications  
+- Size: {{ config.art_style.tile_size }}x{{ config.art_style.tile_size }} pixels
+- Grid alignment: Perfect pixel boundaries
+- Connection rules for autotiling
+- Layer order: Ground → Decoration → Collision
+
+## Shading Techniques
+- Style: {{ config.art_style.shading }}
+- Light source: Top-left at 45 degrees
+- Maximum 3 shades per color
+- Dithering patterns for transitions
+
+## Animation Guidelines
+- Frame rate: 10-15 FPS for character animations
+- 5-8 FPS for environmental animations
+- No rotation except 90-degree increments
+- No scaling except 2x for boss sprites
+
+## 3/4 Perspective Rules
+- Vertical objects show 3/4 of their height
+- Horizontal surfaces show full width
+- Character feet align with tile bottom edge
+- Building roofs show partial top surface
+
+## DO's
+✓ Use palette swapping for enemy variants
+✓ Apply consistent black outlines
+✓ Maintain pixel-perfect alignment
+✓ Use tile patterns for large surfaces
+✓ Keep UI elements on 8-pixel grid
+
+## DON'Ts
+✗ Use anti-aliasing or smoothing
+✗ Create gradients with more than dithering
+✗ Scale sprites to non-integer values
+✗ Rotate sprites to arbitrary angles
+✗ Use transparency except for effects
+
+## Technical Constraints
+- Maximum unique tiles: 512 per tileset
+- Maximum sprite frames: 256 per character
+- Palette swaps don't count toward limits
+- All sprites must fit in 2048x2048 atlas
+
+## Validation Rules
+1. Every pixel must use a defined palette color
+2. Sprites must have consistent outline treatment  
+3. Animation frames must maintain volume
+4. Tile edges must connect seamlessly
+5. Text must be readable at 1x scale

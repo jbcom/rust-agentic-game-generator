@@ -1,0 +1,153 @@
+{# World Generation Template #}
+Design a complete world for {{ config.name }} following the established style guide.
+
+Style Guide Context:
+{{ style_guide }}
+
+Create a world with these specifications:
+
+## World Overview
+- Name: {{ config.world.name }}
+- Size: {{ config.world.size }}
+- Total regions: {{ config.world.regions | length }}
+
+## Regions to Generate
+
+{% for region in config.world.regions %}
+### {{ region.name }} ({{ region.biome }})
+- Description: {{ region.description }}
+- Key locations: {{ region.key_locations | join(", ") }}
+- Design requirements:
+  - Distinctive tileset using the defined palette
+  - Environmental storytelling elements
+  - Natural boundaries with other regions
+  - Hidden secrets and optional areas
+{% endfor %}
+
+## Towns to Design
+
+{% for town in config.towns %}
+### {{ town.name }}
+- Size: {{ town.size }}
+- Key features:
+  - Shops: {{ town.shops | join(", ") }}
+  - Has inn: {{ town.inn }}
+  - Has save point: {{ town.save_point }}
+- NPCs needed: {{ town.key_npcs | join(", ") }}
+- Architectural style fitting the region
+- Memorable layout with landmarks
+{% endfor %}
+
+## Dungeons to Create
+
+{% for dungeon in config.dungeons %}
+### {{ dungeon.name }}
+- Theme: {{ dungeon.theme }}
+- Floors: {{ dungeon.floors }}
+- Boss: {{ dungeon.boss }}
+- Unique mechanic: {{ dungeon.gimmick }}
+- Treasure types: {{ dungeon.treasures | join(", ") }}
+- Environmental puzzle elements
+{% endfor %}
+
+## Generation Requirements
+
+Return a JSON structure with:
+```json
+{
+  "regions": [
+    {
+      "name": "string",
+      "map_data": "base64 encoded tilemap data",
+      "encounters": ["enemy_type1", "enemy_type2"],
+      "music": "track_name",
+      "connections": [
+        {
+          "to": "region_name",
+          "type": "path|bridge|cave|teleport",
+          "location": "north|south|east|west"
+        }
+      ],
+      "points_of_interest": [
+        {
+          "name": "string",
+          "type": "town|dungeon|secret|landmark",
+          "coordinates": {"x": 0, "y": 0}
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "region_name",
+      "to": "region_name", 
+      "connection_type": "road|bridge|cave|ship",
+      "requirements": ["item_needed_if_any"]
+    }
+  ],
+  "towns": [
+    {
+      "name": "string",
+      "region": "parent_region",
+      "map_data": "base64 encoded tilemap",
+      "npcs": [
+        {
+          "name": "string",
+          "sprite": "sprite_id",
+          "dialog_tree": "dialog_id",
+          "gives_quest": "quest_id|null"
+        }
+      ],
+      "shops": [
+        {
+          "name": "string",
+          "type": "weapon|armor|item|magic|special",
+          "inventory": ["item_id1", "item_id2"],
+          "prices": {"item_id": 100}
+        }
+      ]
+    }
+  ],
+  "dungeons": [
+    {
+      "name": "string",
+      "region": "parent_region",
+      "floors": [
+        {
+          "number": 1,
+          "layout": "base64 encoded tilemap",
+          "encounters": ["enemy_type1", "enemy_type2"],
+          "encounter_rate": 0.1,
+          "treasures": [
+            {
+              "item": "item_id",
+              "location": {"x": 0, "y": 0},
+              "hidden": false
+            }
+          ],
+          "puzzles": [
+            {
+              "type": "switch|block|key|riddle",
+              "description": "string",
+              "solution": "string"
+            }
+          ]
+        }
+      ],
+      "boss": {
+        "name": "string",
+        "sprite": "boss_sprite_id",
+        "hp": 1000,
+        "attacks": ["attack1", "attack2"],
+        "dialog": {
+          "before_battle": "string",
+          "defeat": "string"
+        },
+        "rewards": ["item_id", "ability_id"]
+      }
+    }
+  ]
+}
+```
+
+Ensure all locations connect logically and the world feels cohesive. Each area should have a purpose in the overall adventure.

@@ -1,0 +1,88 @@
+[package]
+name = "vintage_game_generator"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Visual-first vintage game generator with AI assistance"
+repository.workspace = true
+
+[dependencies]
+# Core UI Framework
+bevy = { version = "0.16.1", features = ["dynamic_linking"] }
+bevy_egui = "0.35"
+bevy-inspector-egui = "0.32"
+egui_dock = "0.16"
+catppuccin-egui = { version = "5.6", features = ["egui31"], default-features = false }
+
+# CLI and Configuration
+clap = { version = "4.5", features = ["derive"] }
+dirs = "6.0"
+uuid = { version = "1.17", features = ["v4", "serde"] }
+petgraph = "0.6"
+
+# Game Blending
+vintage_blending_core = { path = "../vintage_blending_core" }
+
+# AI Integration
+vintage_ai_client = { path = "../vintage_ai_client", features = ["bevy"] }
+async-openai = "0.26"
+tokio = { version = "1", features = ["full"] }
+
+# Template Engine
+minijinja = { version = "2.11", features = ["loader"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.9"
+
+# Error Handling
+anyhow = "1.0"
+thiserror = "2.0"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+notify = "8.1"
+syn = { version = "2.0", features = ["full", "parsing"] }
+base64 = "0.22"
+crossbeam-channel = "0.5"
+open = "5.3"
+sha2 = "0.10"
+bincode = "1.3"
+zstd = "0.13"
+image = "0.25"
+async-trait = "0.1"
+futures = "0.3"
+tokio-stream = "0.1"
+ron = "0.9"
+
+[[bin]]
+name = "vintage_game_generator"
+path = "src/main.rs"
+
+[lib]
+name = "vintage_game_generator"
+path = "src/lib.rs"
+
+[features]
+default = []
+
+[build-dependencies]
+# Use our build tools package that handles all the build logic
+vintage_build_tools = { path = "../vintage_build_tools" }
+# Need anyhow for error handling
+anyhow = "1.0"
+# Need tokio for async build script
+tokio = { version = "1", features = ["rt", "macros"] }
+
+[dev-dependencies]
+# Testing utilities
+tempfile = "3.20"
+futures = "0.3"
+reqwest = { version = "0.12", features = ["json"] }
+reqwest-middleware = "0.4"
+reqwest-vcr = "0.3.0"
+rand = "0.8"
