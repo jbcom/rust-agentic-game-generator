@@ -1,0 +1,25 @@
+16-bit pixel art tileset for {{ theme }} environment.
+
+Tile specifications:
+- Individual tile size: {{ tile_width }}x{{ tile_height }} pixels
+- Grid layout: {{ grid_width }}x{{ grid_height }} tiles
+- Total image: {{ total_width }}x{{ total_height }} pixels
+
+Required tiles:
+{% for tile_type in tile_types %}
+- {{ tile_type }}
+{% endfor %}
+
+Style requirements:
+- Color palette: Maximum {{ max_colors }} colors
+- Shading: {{ shading_technique }}
+- Perspective: {{ perspective }}
+- Seamless tiling: All tiles must connect seamlessly
+- Visual consistency: Maintain uniform style across all tiles
+
+Environmental details:
+- Theme: {{ theme }}
+- Mood: {{ mood }}
+- Lighting: {{ lighting }}
+
+CRITICAL: Pure pixel art, no anti-aliasing, perfect grid alignment.
