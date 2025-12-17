@@ -1,0 +1,104 @@
+{# AI Analysis Template for Batch Game Processing #}
+Analyze the following {{ games|length }} vintage video games from 1980-1995. For each game, provide deep analysis across multiple dimensions. Your analysis should capture the essence of what made each game special, innovative, and memorable.
+
+GAMES TO ANALYZE:
+{% for game in games %}
+==================
+Game #{{ loop.index }}: {{ game.name }}
+Year: {{ game.year }}
+Genre: {{ game.genre }}
+Developer: {{ game.developer if game.developer else "Unknown" }}
+Platforms: {{ game.platforms|join(", ") if game.platforms else "Unknown" }}
+Description: {{ game.deck if game.deck else "No description available" }}
+==================
+{% endfor %}
+
+For each game, provide a comprehensive analysis in the following JSON structure:
+
+```json
+{
+  "games": [
+    {
+      "themes": ["string array of core themes like 'exploration', 'survival', 'friendship', etc."],
+      "narrative_elements": ["string array of narrative components like 'hero's journey', 'rescue mission', etc."],
+      "mechanics": [
+        {
+          "name": "mechanic name",
+          "description": "how this mechanic works",
+          "importance": 0.0-1.0,
+          "innovation_level": 0.0-1.0
+        }
+      ],
+      "mood_tags": ["string array of mood descriptors like 'tense', 'whimsical', 'dark', etc."],
+      "innovation_aspects": ["string array of innovative features this game introduced"],
+      "cultural_impact": "detailed string about the game's cultural significance",
+      "design_philosophy": "string describing the core design principles",
+      "player_experience": "string describing what it feels like to play this game",
+      "difficulty_curve": "string describing how difficulty progresses",
+      "replayability_factors": ["string array of what makes players come back"],
+      "artistic_style": "string describing the visual aesthetic",
+      "audio_design": "string describing the sound and music approach",
+      "pacing": "string describing the game's rhythm and flow",
+      "target_audience": ["string array of who this game was designed for"],
+      "unique_features": ["string array of features that set this game apart"],
+      "influenced_by": ["string array of earlier games that influenced this one"],
+      "influenced_games": ["string array of later games this one influenced"],
+      "genre_blend": [
+        {
+          "genre": "genre name",
+          "weight": 0.0-1.0
+        }
+      ],
+      "era_significance": "string describing why this game mattered in its era",
+      "technical_achievements": ["string array of technical breakthroughs"],
+      "memorable_moments": ["string array of iconic moments or sequences"],
+      "core_loop": "string describing the fundamental gameplay loop",
+      "progression_system": "string describing how players advance",
+      "social_features": ["string array of multiplayer or social elements"],
+      "accessibility_notes": ["string array of accessibility considerations"],
+      
+      "theme_embeddings": [384 floats representing semantic embedding of themes],
+      "mechanic_embeddings": [384 floats representing semantic embedding of mechanics],
+      "narrative_embeddings": [384 floats representing semantic embedding of narrative],
+      "overall_embedding": [384 floats representing overall game essence]
+    }
+  ]
+}
+```
+
+ANALYSIS GUIDELINES:
+
+1. **Themes**: Identify 3-8 core themes that define the game's essence. Consider both explicit themes (what the game is about) and implicit themes (what the game makes players feel or think about).
+
+2. **Mechanics**: List 2-6 core mechanics. For each, assess:
+   - Importance: How central is this mechanic to the core experience?
+   - Innovation: Was this mechanic novel at the time or a refinement of existing ideas?
+
+3. **Cultural Impact**: Consider the game's influence on:
+   - Gaming culture and communities
+   - Popular culture references
+   - Industry trends and development practices
+   - Player expectations and preferences
+
+4. **Design Philosophy**: Analyze the underlying design principles:
+   - What were the designers trying to achieve?
+   - What trade-offs did they make?
+   - How did technical limitations shape the design?
+
+5. **Era Significance**: Place the game in its historical context:
+   - What made it stand out in {{ analysis_date[:4] }}?
+   - How did it push boundaries or set new standards?
+   - What contemporary games was it competing with?
+
+6. **Technical Achievements**: Focus on innovations relevant to the era:
+   - Graphics techniques (sprite scaling, parallax scrolling, Mode 7, etc.)
+   - Sound capabilities (FM synthesis, sample playback, etc.)
+   - Game engine features (physics, AI, procedural generation)
+   - Performance optimizations
+
+7. **Embeddings**: Generate meaningful 384-dimensional embeddings that capture:
+   - Semantic meaning of themes, mechanics, and narrative
+   - Overall "fingerprint" of the game's essence
+   - These will be used for similarity calculations and game blending
+
+Remember: Focus on what made these games special in their time, not how they compare to modern standards. Celebrate their innovations and understand their limitations as part of their charm.

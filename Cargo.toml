@@ -1,5 +1,5 @@
 [workspace]
-members = ["vintage_ai_client", "vintage_blending_core"]
+members = ["vintage_ai_client", "vintage_blending_core", "vintage_build_tools"]
 resolver = "2"
 
 [workspace.package]
@@ -45,3 +45,6 @@ bevy_egui = "0.34"
 
 # Blending core dependencies
 ahash = "0.8"
+
+# Build tools dependencies
+dotenv = "0.15"
