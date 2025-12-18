@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Difficulty"],"fn":["analyze_usage_for_optimizations"],"struct":["CostOptimizationSuggestion","ModelCost","ModelPricing","TokenCounter","TokenOptimizer","TokenStats"]};

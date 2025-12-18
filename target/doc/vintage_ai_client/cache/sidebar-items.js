@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["CachedData","ImageFormat"],"fn":["cached"],"struct":["AiCache","CacheConfig","CacheMetadata","CacheStats","CachedItem","ImageCache"]};

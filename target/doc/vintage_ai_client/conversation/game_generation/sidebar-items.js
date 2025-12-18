@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["create_project_directory","generate_style_guide","generate_world","save_world_data"],"trait":["GameGenerationExt"]};

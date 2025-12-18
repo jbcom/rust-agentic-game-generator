@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["build_color_map","find_nearest_in_palette","recolor_sprite"]};

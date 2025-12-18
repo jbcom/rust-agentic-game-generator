@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["extract_sprites","generate_metadata","pack_sprites"]};
