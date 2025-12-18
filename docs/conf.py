@@ -9,23 +9,48 @@ sys.path.insert(0, os.path.abspath("../src"))
 
 # -- Project information -----------------------------------------------------
 # TODO: Update these for your project
-project = "PACKAGE_NAME"
+project = "Vintage Game Generator"
 copyright = "2025, Jon Bogaty"
 author = "Jon Bogaty"
 
-# Try to get version from pyproject.toml or package.json
+# Try to get version from Cargo.toml, pyproject.toml or package.json
+release = "0.0.0"
 try:
     import tomllib
-    with open("../pyproject.toml", "rb") as f:
-        data = tomllib.load(f)
-        release = data.get("project", {}).get("version", "0.0.0")
+
+    # Check Cargo.toml first
+    try:
+        with open("../Cargo.toml", "rb") as f:
+            data = tomllib.load(f)
+            # Try workspace version first
+            release = data.get("workspace", {}).get("package", {}).get("version")
+            if not release:
+                release = data.get("package", {}).get("version")
+    except FileNotFoundError:
+        pass
+
+    # Check pyproject.toml if no version found yet
+    if not release or release == "0.0.0":
+        try:
+            with open("../pyproject.toml", "rb") as f:
+                data = tomllib.load(f)
+                release = data.get("project", {}).get("version")
+        except FileNotFoundError:
+            pass
 except Exception:
+    pass
+
+# Check package.json if no version found yet
+if not release or release == "0.0.0":
     try:
         import json
         with open("../package.json") as f:
             release = json.load(f).get("version", "0.0.0")
     except Exception:
-        release = "0.0.0"
+        pass
+
+if not release:
+    release = "0.0.0"
 
 # -- General configuration ---------------------------------------------------
 
