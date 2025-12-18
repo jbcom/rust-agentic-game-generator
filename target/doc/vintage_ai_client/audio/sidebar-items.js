@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["capitalize_first"],"mod":["constraints"],"struct":["AmplitudeEnvelope","AudioConfig","AudioConstraints","AudioGenerator","MusicDescription","MusicSection","SoundEffectDescription"]};

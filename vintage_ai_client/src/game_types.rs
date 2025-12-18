@@ -1,5 +1,5 @@
 //! Game-specific types for vintage game generation
-//! 
+//!
 //! This module contains all the data structures needed for
 //! defining and generating vintage-style games, including
 //! configuration, world building, and RPG systems.
@@ -16,17 +16,17 @@ pub struct GameConfig {
     pub genre: String,
     pub setting: String,
     pub era: String,
-    
+
     // Visual Style
     pub art_style: ArtStyle,
     pub color_palette: ColorPalette,
     pub reference_games: Vec<String>,
-    
+
     // World Design
     pub world: WorldConfig,
     pub towns: Vec<TownConfig>,
     pub dungeons: Vec<DungeonConfig>,
-    
+
     // RPG Systems
     pub party_system: PartySystem,
     pub combat_system: CombatSystem,
@@ -34,12 +34,12 @@ pub struct GameConfig {
     pub inventory_system: InventorySystem,
     pub shop_system: ShopSystem,
     pub quest_system: QuestSystem,
-    
+
     // Story
     pub main_quest: QuestLine,
     pub side_quests: Vec<QuestLine>,
     pub characters: Vec<Character>,
-    
+
     // Audio
     pub music_style: String,
     pub sound_effects_style: String,
@@ -57,7 +57,7 @@ pub struct ArtStyle {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ColorPalette {
-    pub primary: Vec<String>,   // Hex colors
+    pub primary: Vec<String>, // Hex colors
     pub secondary: Vec<String>,
     pub ui: Vec<String>,
     pub effects: Vec<String>,

@@ -1,5 +1,5 @@
 //! AI service modules for game generation
-//! 
+//!
 //! This module provides a unified interface for all AI-powered features including:
 //! - Text generation (game descriptions, narratives, code)
 //! - Image generation (sprites, tilesets, UI elements)
@@ -8,16 +8,16 @@
 //! - Token counting and cost optimization
 //! - Intelligent caching to reduce API calls
 
-pub mod text;
-pub mod image;
 pub mod audio;
-pub mod conversation;
 pub mod cache;
-pub mod tokens;
-pub mod consistency;
 pub mod client;
+pub mod consistency;
+pub mod conversation;
 pub mod embeddings;
 pub mod game_types;
+pub mod image;
+pub mod text;
+pub mod tokens;
 
 use anyhow::Result;
 use async_openai::{Client, config::OpenAIConfig};
@@ -42,7 +42,7 @@ impl AiService {
     pub fn new() -> Result<Self> {
         let config = OpenAIConfig::new();
         let client = Arc::new(Client::with_config(config));
-        
+
         Ok(Self {
             client: client.clone(),
             cache: Arc::new(Mutex::new(cache::AiCache::new()?)),
@@ -50,56 +50,56 @@ impl AiService {
             style_manager: Arc::new(Mutex::new(consistency::StyleManager::new())),
         })
     }
-    
+
     /// Initialize from environment variables
     pub fn from_env() -> Result<Self> {
         // This will use OPENAI_API_KEY from environment
         Self::new()
     }
-    
+
     /// Get a reference to the text generation service
     pub fn text(&self) -> text::TextGenerator {
         text::TextGenerator::new(
             self.client.clone(),
             self.cache.clone(),
-            self.token_counter.clone()
+            self.token_counter.clone(),
         )
     }
-    
+
     /// Get a reference to the image generation service
     pub fn image(&self) -> image::ImageGenerator {
         image::ImageGenerator::new(
             self.client.clone(),
             self.cache.clone(),
             self.token_counter.clone(),
-            self.style_manager.clone()
+            self.style_manager.clone(),
         )
     }
-    
+
     /// Get a reference to the audio generation service
     pub fn audio(&self) -> audio::AudioGenerator {
         audio::AudioGenerator::new(
             self.client.clone(),
             self.cache.clone(),
-            self.token_counter.clone()
+            self.token_counter.clone(),
         )
     }
-    
+
     /// Get a reference to the conversation service
     pub fn conversation(&self) -> conversation::ConversationManager {
         conversation::ConversationManager::new(
             self.client.clone(),
             self.cache.clone(),
-            self.token_counter.clone()
+            self.token_counter.clone(),
         )
     }
-    
+
     /// Get a reference to the embeddings service
     pub fn embeddings(&self) -> embeddings::EmbeddingsGenerator {
         embeddings::EmbeddingsGenerator::new(
             self.client.clone(),
             self.cache.clone(),
-            self.token_counter.clone()
+            self.token_counter.clone(),
         )
     }
 }
@@ -109,13 +109,13 @@ impl AiService {
 pub trait AiGenerator: Send + Sync {
     /// Get estimated tokens for a request
     async fn estimate_tokens(&self, request: &str) -> Result<usize>;
-    
+
     /// Get estimated cost for a request
     async fn estimate_cost(&self, request: &str) -> Result<f64>;
-    
+
     /// Check if result is cached
     async fn is_cached(&self, key: &str) -> bool;
-    
+
     /// Clear cache for specific key
     async fn clear_cache(&self, key: &str) -> Result<()>;
 }
@@ -131,7 +131,7 @@ pub struct AiConfig {
     pub image_model: String,
     /// Audio generation model (e.g., tts-1, tts-1-hd)
     pub audio_model: String,
-    
+
     // Generation Parameters
     /// Temperature for generation (0.0 - 2.0)
     pub temperature: f32,
@@ -143,17 +143,17 @@ pub struct AiConfig {
     pub frequency_penalty: f32,
     /// Presence penalty for text generation (-2.0 to 2.0)
     pub presence_penalty: f32,
-    
+
     // Image Parameters
     /// Image quality (standard or hd for DALL-E 3)
     pub image_quality: String,
     /// Image size (1024x1024, 1792x1024, 1024x1792 for DALL-E 3)
     pub image_size: String,
-    
+
     // Provider Settings
     /// AI provider (openai, anthropic)
     pub ai_provider: String,
-    
+
     // Cache and Performance
     /// Enable AI response caching
     pub cache_enabled: bool,
@@ -174,21 +174,21 @@ impl Default for AiConfig {
             text_model: "gpt-4".to_string(),
             image_model: "dall-e-3".to_string(),
             audio_model: "tts-1".to_string(),
-            
+
             // Generation defaults
             temperature: 0.8,
             top_p: 0.95,
             max_tokens: 2000,
             frequency_penalty: 0.0,
             presence_penalty: 0.0,
-            
+
             // Image defaults
             image_quality: "standard".to_string(),
             image_size: "1024x1024".to_string(),
-            
+
             // Provider defaults
             ai_provider: "openai".to_string(),
-            
+
             // Cache and performance defaults
             cache_enabled: true,
             cache_ttl: 3600 * 24 * 7, // 1 week
@@ -204,34 +204,34 @@ impl AiConfig {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Builder pattern for model configuration
     pub fn with_text_model(mut self, model: impl Into<String>) -> Self {
         self.text_model = model.into();
         self
     }
-    
+
     pub fn with_image_model(mut self, model: impl Into<String>) -> Self {
         self.image_model = model.into();
         self
     }
-    
+
     pub fn with_audio_model(mut self, model: impl Into<String>) -> Self {
         self.audio_model = model.into();
         self
     }
-    
+
     /// Builder pattern for generation parameters
     pub fn with_temperature(mut self, temp: f32) -> Self {
         self.temperature = temp.clamp(0.0, 2.0);
         self
     }
-    
+
     pub fn with_max_tokens(mut self, tokens: u32) -> Self {
         self.max_tokens = tokens.min(128000); // Max for GPT-4
         self
     }
-    
+
     /// Validate and clamp configuration values
     pub fn validate(mut self) -> Self {
         self.temperature = self.temperature.clamp(0.0, 2.0);

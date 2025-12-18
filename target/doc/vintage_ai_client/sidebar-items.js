@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["audio","cache","client","consistency","conversation","embeddings","game_types","image","text","tokens"],"struct":["AiConfig","AiService"],"trait":["AiGenerator"]};

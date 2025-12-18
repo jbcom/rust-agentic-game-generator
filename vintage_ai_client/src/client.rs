@@ -1,22 +1,22 @@
 //! Unified AI client - the public API for all AI services
-//! 
+//!
 //! This is the main entry point for any part of the application that needs AI functionality.
 //! It manages all AI service instances and provides a clean, consistent interface.
 
 use anyhow::Result;
 use minijinja::{Environment, context};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use std::collections::HashMap;
-use tokio::sync::RwLock;
 use std::path::Path;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 use super::{
-    AiService, AiConfig, AiGenerator,
-    text::{TextGenerator, TextConfig},
-    image::{ImageGenerator, ImageConfig},
-    audio::{AudioGenerator, AudioConfig},
-    conversation::{ConversationManager, ConversationContext},
+    AiConfig, AiGenerator, AiService,
+    audio::{AudioConfig, AudioGenerator},
+    conversation::{ConversationContext, ConversationManager},
+    image::{ImageConfig, ImageGenerator},
+    text::{TextConfig, TextGenerator},
 };
 
 /// The unified AI client - your one-stop shop for all AI services
@@ -74,10 +74,7 @@ pub enum AiTask {
         mood: String,
     },
     /// Have a conversation about game design
-    DiscussGameDesign {
-        context: String,
-        question: String,
-    },
+    DiscussGameDesign { context: String, question: String },
     /// Generate code for a game component
     GenerateCode {
         language: String,
@@ -123,7 +120,7 @@ impl AiClient {
         let config = Arc::new(RwLock::new(AiConfig::default()));
         let history = Arc::new(RwLock::new(Vec::new()));
         let templates = Arc::new(Self::create_template_env()?);
-        
+
         Ok(Self {
             service,
             config,
@@ -131,14 +128,14 @@ impl AiClient {
             templates,
         })
     }
-    
+
     /// Create with custom configuration
     pub fn with_config(config: AiConfig) -> Result<Self> {
         let service = Arc::new(AiService::from_env()?);
         let config = Arc::new(RwLock::new(config));
         let history = Arc::new(RwLock::new(Vec::new()));
         let templates = Arc::new(Self::create_template_env()?);
-        
+
         Ok(Self {
             service,
             config,
@@ -146,71 +143,88 @@ impl AiClient {
             templates,
         })
     }
-    
+
     /// Create the template environment
     fn create_template_env() -> Result<Environment<'static>> {
         let mut env = Environment::new();
-        
+
         // Get the crate root directory
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .unwrap_or_else(|_| ".".to_string());
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
         let prompts_dir = Path::new(&manifest_dir).join("prompts");
-        
+
         // Load all templates
         env.set_loader(minijinja::path_loader(prompts_dir));
-        
+
         Ok(env)
     }
-    
+
     /// Execute a high-level AI task
     pub async fn execute(&self, task: AiTask) -> Result<AiResult> {
         let start = std::time::Instant::now();
-        
+
         let (result, request_type, tokens, cost, cache_hit) = match task {
-            AiTask::GenerateGameDescription { blend_name, genres, mechanics, themes } => {
-                let prompt = self.build_game_description_prompt(&blend_name, &genres, &mechanics, &themes);
+            AiTask::GenerateGameDescription {
+                blend_name,
+                genres,
+                mechanics,
+                themes,
+            } => {
+                let prompt =
+                    self.build_game_description_prompt(&blend_name, &genres, &mechanics, &themes);
                 let config = TextConfig::for_game_description();
                 let text_gen = self.service.text();
-                
+
                 let cache_key = format!("game_desc_{}", blend_name);
                 let cache_hit = text_gen.is_cached(&cache_key).await;
-                
+
                 let result = text_gen.generate(&prompt, config).await?;
                 let tokens = text_gen.estimate_tokens(&prompt).await?;
                 let cost = text_gen.estimate_cost(&prompt).await?;
-                
+
                 (
                     AiResult::Text(result),
-                    AiRequestType::Text { purpose: "game_description".to_string() },
+                    AiRequestType::Text {
+                        purpose: "game_description".to_string(),
+                    },
                     tokens,
                     cost,
-                    cache_hit
+                    cache_hit,
                 )
             }
-            
-            AiTask::GenerateConceptArt { game_name, art_style, subjects } => {
+
+            AiTask::GenerateConceptArt {
+                game_name,
+                art_style,
+                subjects,
+            } => {
                 let prompt = self.build_concept_art_prompt(&game_name, &art_style, &subjects);
                 let config = ImageConfig::for_sprites(); // Use sprites config for concept art
                 let image_gen = self.service.image();
-                
+
                 let cache_key = format!("concept_art_{}_{}", game_name, subjects.join("_"));
                 let cache_hit = image_gen.is_cached(&cache_key).await;
-                
+
                 // Generate image using ImageGenerator's specific method with config
                 let result = image_gen.generate_single(&prompt, config).await?;
                 let tokens = image_gen.estimate_tokens(&prompt).await?;
                 let cost = image_gen.estimate_cost(&prompt).await?;
-                
+
                 (
                     AiResult::Image(result),
-                    AiRequestType::Image { purpose: "concept_art".to_string() },
+                    AiRequestType::Image {
+                        purpose: "concept_art".to_string(),
+                    },
                     tokens,
                     cost,
-                    cache_hit
+                    cache_hit,
                 )
             }
-            
-            AiTask::GenerateAudio { game_name, audio_type, mood } => {
+
+            AiTask::GenerateAudio {
+                game_name,
+                audio_type,
+                mood,
+            } => {
                 let prompt = self.build_audio_prompt(&game_name, &audio_type, &mood);
                 let config = match audio_type {
                     AudioType::ThemeSong => AudioConfig::for_exploration(), // Use exploration for theme
@@ -219,14 +233,16 @@ impl AiClient {
                     AudioType::SoundEffect(_) => AudioConfig::for_ui(), // Use UI config for sound effects
                 };
                 let audio_gen = self.service.audio();
-                
-                let cache_key = format!("audio_{}_{}_{}", game_name, format!("{:?}", audio_type), mood);
+
+                let cache_key = format!("audio_{}_{}_{:?}_{}", game_name, "", audio_type, mood);
                 let cache_hit = audio_gen.is_cached(&cache_key).await;
-                
+
                 // Generate audio description based on type
                 let result = match &audio_type {
                     AudioType::ThemeSong | AudioType::BattleMusic | AudioType::VictoryFanfare => {
-                        let music_desc = audio_gen.generate_music_description(&prompt, config).await?;
+                        let music_desc = audio_gen
+                            .generate_music_description(&prompt, config)
+                            .await?;
                         // Convert to bytes (placeholder - would need actual audio generation)
                         serde_json::to_vec(&music_desc)?
                     }
@@ -238,16 +254,18 @@ impl AiClient {
                 };
                 let tokens = audio_gen.estimate_tokens(&prompt).await?;
                 let cost = audio_gen.estimate_cost(&prompt).await?;
-                
+
                 (
                     AiResult::Audio(result),
-                    AiRequestType::Audio { purpose: format!("{:?}", audio_type) },
+                    AiRequestType::Audio {
+                        purpose: format!("{:?}", audio_type),
+                    },
                     tokens,
                     cost,
-                    cache_hit
+                    cache_hit,
                 )
             }
-            
+
             AiTask::DiscussGameDesign { context, question } => {
                 let conv_manager = self.service.conversation();
                 let conv_context = ConversationContext {
@@ -258,89 +276,105 @@ impl AiClient {
                     generation_phase: None,
                     project_config: None,
                 };
-                
+
                 // Start a conversation and send the message
-                let conv_id = conv_manager.start_conversation("Game Design Discussion".to_string(), conv_context).await?;
-                let response = conv_manager.send_message(&conv_id, question.clone()).await?;
-                
+                let conv_id = conv_manager
+                    .start_conversation("Game Design Discussion".to_string(), conv_context)
+                    .await?;
+                let response = conv_manager
+                    .send_message(&conv_id, question.clone())
+                    .await?;
+
                 let tokens = conv_manager.estimate_tokens(&question).await?;
                 let cost = conv_manager.estimate_cost(&question).await?;
-                
+
                 (
                     AiResult::Conversation {
                         response,
                         context_updated: true,
                     },
-                    AiRequestType::Conversation { context: "game_design".to_string() },
+                    AiRequestType::Conversation {
+                        context: "game_design".to_string(),
+                    },
                     tokens,
                     cost,
-                    false // Conversations typically aren't cached
+                    false, // Conversations typically aren't cached
                 )
             }
-            
-            AiTask::GenerateCode { language, component_type, specifications } => {
+
+            AiTask::GenerateCode {
+                language,
+                component_type,
+                specifications,
+            } => {
                 let prompt = self.build_code_prompt(&language, &component_type, &specifications);
                 let config = TextConfig::for_code_generation();
                 let text_gen = self.service.text();
-                
+
                 let cache_key = format!("code_{}_{}", language, component_type);
                 let cache_hit = text_gen.is_cached(&cache_key).await;
-                
+
                 let result = text_gen.generate(&prompt, config).await?;
                 let tokens = text_gen.estimate_tokens(&prompt).await?;
                 let cost = text_gen.estimate_cost(&prompt).await?;
-                
+
                 (
                     AiResult::Text(result),
-                    AiRequestType::Text { purpose: "code_generation".to_string() },
+                    AiRequestType::Text {
+                        purpose: "code_generation".to_string(),
+                    },
                     tokens,
                     cost,
-                    cache_hit
+                    cache_hit,
                 )
             }
-            
+
             AiTask::CustomText { prompt, config } => {
                 let config = config.unwrap_or_default();
                 let text_gen = self.service.text();
-                
+
                 let cache_key = format!("custom_text_{}", &prompt[..prompt.len().min(50)]);
                 let cache_hit = text_gen.is_cached(&cache_key).await;
-                
+
                 let result = text_gen.generate(&prompt, config).await?;
                 let tokens = text_gen.estimate_tokens(&prompt).await?;
                 let cost = text_gen.estimate_cost(&prompt).await?;
-                
+
                 (
                     AiResult::Text(result),
-                    AiRequestType::Text { purpose: "custom".to_string() },
+                    AiRequestType::Text {
+                        purpose: "custom".to_string(),
+                    },
                     tokens,
                     cost,
-                    cache_hit
+                    cache_hit,
                 )
             }
-            
+
             AiTask::CustomImage { prompt, config } => {
                 let config = config.unwrap_or_default();
                 let image_gen = self.service.image();
-                
+
                 let cache_key = format!("custom_image_{}", &prompt[..prompt.len().min(50)]);
                 let cache_hit = image_gen.is_cached(&cache_key).await;
-                
+
                 // Generate image using the provided config
                 let result = image_gen.generate_single(&prompt, config).await?;
                 let tokens = image_gen.estimate_tokens(&prompt).await?;
                 let cost = image_gen.estimate_cost(&prompt).await?;
-                
+
                 (
                     AiResult::Image(result),
-                    AiRequestType::Image { purpose: "custom".to_string() },
+                    AiRequestType::Image {
+                        purpose: "custom".to_string(),
+                    },
                     tokens,
                     cost,
-                    cache_hit
+                    cache_hit,
                 )
             }
         };
-        
+
         // Record the request
         let duration_ms = start.elapsed().as_millis() as u64;
         let request_record = AiRequest {
@@ -351,56 +385,56 @@ impl AiClient {
             cache_hit,
             duration_ms,
         };
-        
+
         self.history.write().await.push(request_record);
-        
+
         Ok(result)
     }
-    
+
     /// Get direct access to text generator for advanced use
     pub fn text(&self) -> TextGenerator {
         self.service.text()
     }
-    
+
     /// Get direct access to image generator for advanced use
     pub fn image(&self) -> ImageGenerator {
         self.service.image()
     }
-    
+
     /// Get direct access to audio generator for advanced use
     pub fn audio(&self) -> AudioGenerator {
         self.service.audio()
     }
-    
+
     /// Get direct access to conversation manager for advanced use
     pub fn conversation(&self) -> ConversationManager {
         self.service.conversation()
     }
-    
+
     /// Update configuration
     pub async fn update_config(&self, config: AiConfig) {
         *self.config.write().await = config;
     }
-    
+
     /// Get current configuration
     pub async fn get_config(&self) -> AiConfig {
         self.config.read().await.clone()
     }
-    
+
     /// Get request history
     pub async fn get_history(&self) -> Vec<AiRequest> {
         self.history.read().await.clone()
     }
-    
+
     /// Clear request history
     pub async fn clear_history(&self) {
         self.history.write().await.clear();
     }
-    
+
     /// Get usage statistics
     pub async fn get_usage_stats(&self) -> UsageStats {
         let history = self.history.read().await;
-        
+
         let total_requests = history.len();
         let total_tokens: usize = history.iter().map(|r| r.tokens_used).sum();
         let total_cost: f64 = history.iter().map(|r| r.cost_estimate).sum();
@@ -410,7 +444,7 @@ impl AiClient {
         } else {
             0
         };
-        
+
         UsageStats {
             total_requests,
             total_tokens,
@@ -423,9 +457,9 @@ impl AiClient {
             avg_duration_ms,
         }
     }
-    
+
     // Helper methods for building prompts
-    
+
     fn build_game_description_prompt(
         &self,
         blend_name: &str,
@@ -433,10 +467,11 @@ impl AiClient {
         mechanics: &[String],
         themes: &[String],
     ) -> String {
-        let tmpl = self.templates
+        let tmpl = self
+            .templates
             .get_template("text/game_description.jinja")
             .expect("game_description.jinja template not found");
-        
+
         tmpl.render(context! {
             blend_name => blend_name,
             genres_list => genres.join(", "),
@@ -445,17 +480,18 @@ impl AiClient {
         })
         .expect("Failed to render game_description template")
     }
-    
+
     fn build_concept_art_prompt(
         &self,
         game_name: &str,
         art_style: &str,
         subjects: &[String],
     ) -> String {
-        let tmpl = self.templates
+        let tmpl = self
+            .templates
             .get_template("text/concept_art.jinja")
             .expect("concept_art.jinja template not found");
-        
+
         tmpl.render(context! {
             game_name => game_name,
             art_style => art_style,
@@ -463,24 +499,20 @@ impl AiClient {
         })
         .expect("Failed to render concept_art template")
     }
-    
-    fn build_audio_prompt(
-        &self,
-        game_name: &str,
-        audio_type: &AudioType,
-        mood: &str,
-    ) -> String {
+
+    fn build_audio_prompt(&self, game_name: &str, audio_type: &AudioType, mood: &str) -> String {
         let template_name = match audio_type {
             AudioType::ThemeSong => "audio/theme_song.jinja",
             AudioType::BattleMusic => "audio/battle_music.jinja",
             AudioType::VictoryFanfare => "audio/victory_fanfare.jinja",
             AudioType::SoundEffect(_) => "audio/sound_effect.jinja",
         };
-        
-        let tmpl = self.templates
+
+        let tmpl = self
+            .templates
             .get_template(template_name)
-            .expect(&format!("{} template not found", template_name));
-        
+            .unwrap_or_else(|_| panic!("{} template not found", template_name));
+
         let ctx = if let AudioType::SoundEffect(effect) = audio_type {
             context! {
                 game_name => game_name,
@@ -493,21 +525,22 @@ impl AiClient {
                 mood => mood,
             }
         };
-        
+
         tmpl.render(ctx)
-            .expect(&format!("Failed to render {} template", template_name))
+            .unwrap_or_else(|_| panic!("Failed to render {} template", template_name))
     }
-    
+
     fn build_code_prompt(
         &self,
         language: &str,
         component_type: &str,
         specifications: &str,
     ) -> String {
-        let tmpl = self.templates
+        let tmpl = self
+            .templates
             .get_template("text/code_generation.jinja")
             .expect("code_generation.jinja template not found");
-        
+
         tmpl.render(context! {
             language => language,
             component_type => component_type,
@@ -538,12 +571,10 @@ pub struct BlendData {
 }
 
 /// Extension trait for blend integration
+#[allow(async_fn_in_trait)]
 pub trait BlendAiIntegration {
     /// Generate AI content from a blend result
-    async fn generate_from_blend(
-        &self,
-        blend: &BlendData,
-    ) -> Result<GeneratedContent>;
+    async fn generate_from_blend(&self, blend: &BlendData) -> Result<GeneratedContent>;
 }
 
 /// Generated content from a blend
@@ -556,21 +587,21 @@ pub struct GeneratedContent {
 }
 
 impl BlendAiIntegration for AiClient {
-    async fn generate_from_blend(
-        &self,
-        blend: &BlendData,
-    ) -> Result<GeneratedContent> {
+    async fn generate_from_blend(&self, blend: &BlendData) -> Result<GeneratedContent> {
         // Generate game description
-        let description = match self.execute(AiTask::GenerateGameDescription {
-            blend_name: blend.name.clone(),
-            genres: blend.genres.clone(),
-            mechanics: blend.mechanics.clone(),
-            themes: blend.themes.clone(),
-        }).await? {
+        let description = match self
+            .execute(AiTask::GenerateGameDescription {
+                blend_name: blend.name.clone(),
+                genres: blend.genres.clone(),
+                mechanics: blend.mechanics.clone(),
+                themes: blend.themes.clone(),
+            })
+            .await?
+        {
             AiResult::Text(text) => text,
             _ => return Err(anyhow::anyhow!("Expected text result")),
         };
-        
+
         // Generate marketing tagline
         let tagline_prompt = format!(
             "Create a short, punchy marketing tagline for '{}'. \
@@ -578,19 +609,22 @@ impl BlendAiIntegration for AiClient {
             blend.name,
             blend.genres.join(" meets ")
         );
-        
-        let marketing_tagline = match self.execute(AiTask::CustomText {
-            prompt: tagline_prompt,
-            config: Some(TextConfig {
-                max_tokens: 50,
-                temperature: 0.9,
-                ..Default::default()
-            }),
-        }).await? {
+
+        let marketing_tagline = match self
+            .execute(AiTask::CustomText {
+                prompt: tagline_prompt,
+                config: Some(TextConfig {
+                    max_tokens: 50,
+                    temperature: 0.9,
+                    ..Default::default()
+                }),
+            })
+            .await?
+        {
             AiResult::Text(text) => text.trim().to_string(),
             _ => return Err(anyhow::anyhow!("Expected text result")),
         };
-        
+
         Ok(GeneratedContent {
             description,
             suggested_features: blend.recommended_features.clone(),

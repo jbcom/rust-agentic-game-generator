@@ -1,6 +1,6 @@
 //! Predefined conversation starters
 
-use super::types::{ConversationContext, GameConceptContext, BlendContext, GenerationPhase};
+use super::types::{BlendContext, ConversationContext, GameConceptContext, GenerationPhase};
 use std::collections::HashMap;
 
 /// Start a game design conversation
@@ -14,7 +14,7 @@ pub fn game_design_context() -> ConversationContext {
             Help the user explore and refine their game concepts, offering creative \
             suggestions while maintaining the authentic feel of classic gaming eras. \
             Be encouraging, specific, and reference classic games when relevant."
-            .to_string()
+                .to_string(),
         ),
         generation_phase: None,
         project_config: None,
@@ -40,7 +40,7 @@ pub fn blend_exploration_context(selected_games: Vec<String>) -> ConversationCon
             "You are an expert at analyzing and blending classic game mechanics and styles. \
             Help the user understand how their selected games could combine into something \
             new and exciting. Focus on specific mechanics, visual styles, and gameplay loops."
-            .to_string()
+                .to_string(),
         ),
         generation_phase: None,
         project_config: None,
@@ -58,7 +58,7 @@ pub fn technical_assistance_context() -> ConversationContext {
             Provide clear, practical advice about implementing game features, \
             optimizing performance, and solving technical challenges. \
             Focus on solutions appropriate for indie developers."
-            .to_string()
+                .to_string(),
         ),
         generation_phase: None,
         project_config: None,

@@ -5,25 +5,19 @@ use async_openai::{
     Client,
     config::OpenAIConfig,
     types::{
-        ChatCompletionRequestMessage,
-        ChatCompletionRequestSystemMessageArgs,
-        ChatCompletionRequestUserMessageArgs,
-        ChatCompletionRequestAssistantMessageArgs,
+        ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestMessage,
+        ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
         CreateChatCompletionRequestArgs,
     },
 };
-use std::collections::{HashMap, VecDeque};
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use chrono::Utc;
 use minijinja::Environment;
+use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
-use crate::{
-    AiGenerator,
-    cache::AiCache,
-    tokens::TokenCounter,
-};
+use crate::{AiGenerator, cache::AiCache, tokens::TokenCounter};
 
 use super::types::*;
 
@@ -31,6 +25,7 @@ use super::types::*;
 #[derive(Clone)]
 pub struct ConversationManager {
     pub(crate) client: Arc<Client<OpenAIConfig>>,
+    #[allow(dead_code)]
     pub(crate) cache: Arc<Mutex<AiCache>>,
     pub(crate) token_counter: Arc<Mutex<TokenCounter>>,
     pub(crate) conversations: Arc<Mutex<HashMap<String, Conversation>>>,
@@ -54,31 +49,32 @@ impl ConversationManager {
             templates_dir: None,
         }
     }
-    
+
     /// Initialize template environment for game generation
     pub async fn init_templates(&mut self, templates_dir: PathBuf) -> Result<()> {
         let mut env = Environment::new();
-        
+
         // Load all templates from directory
         for entry in std::fs::read_dir(&templates_dir)? {
             let entry = entry?;
             let path = entry.path();
-            
+
             if path.extension() == Some(std::ffi::OsStr::new("jinja")) {
-                let name = path.file_stem()
+                let name = path
+                    .file_stem()
                     .and_then(|s| s.to_str())
                     .ok_or_else(|| anyhow::anyhow!("Invalid template name"))?;
-                
+
                 let content = std::fs::read_to_string(&path)?;
                 env.add_template_owned(name.to_string(), content)?;
             }
         }
-        
+
         *self.template_env.lock().await = Some(env);
         self.templates_dir = Some(templates_dir);
         Ok(())
     }
-    
+
     /// Start a new conversation
     pub async fn start_conversation(
         &self,
@@ -87,9 +83,9 @@ impl ConversationManager {
     ) -> Result<String> {
         let id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now();
-        
+
         let mut messages = VecDeque::new();
-        
+
         // Add system message if provided
         if let Some(system_prompt) = &context.system_prompt {
             messages.push_back(ConversationMessage {
@@ -99,7 +95,7 @@ impl ConversationManager {
                 tokens: self.estimate_tokens(system_prompt).await?,
             });
         }
-        
+
         let conversation = Conversation {
             id: id.clone(),
             title,
@@ -109,21 +105,21 @@ impl ConversationManager {
             updated_at: now,
             total_tokens: 0,
         };
-        
-        self.conversations.lock().await.insert(id.clone(), conversation);
-        
+
+        self.conversations
+            .lock()
+            .await
+            .insert(id.clone(), conversation);
+
         Ok(id)
     }
-    
+
     /// Send a message and get response
-    pub async fn send_message(
-        &self,
-        conversation_id: &str,
-        message: String,
-    ) -> Result<String> {
-        self.send_message_with_config(conversation_id, message, None).await
+    pub async fn send_message(&self, conversation_id: &str, message: String) -> Result<String> {
+        self.send_message_with_config(conversation_id, message, None)
+            .await
     }
-    
+
     /// Send a message with custom configuration
     pub async fn send_message_with_config(
         &self,
@@ -132,9 +128,10 @@ impl ConversationManager {
         config: Option<MessageConfig>,
     ) -> Result<String> {
         let mut conversations = self.conversations.lock().await;
-        let conversation = conversations.get_mut(conversation_id)
+        let conversation = conversations
+            .get_mut(conversation_id)
             .ok_or_else(|| anyhow::anyhow!("Conversation not found"))?;
-        
+
         // Add user message
         let user_tokens = self.estimate_tokens(&message).await?;
         conversation.messages.push_back(ConversationMessage {
@@ -143,10 +140,10 @@ impl ConversationManager {
             timestamp: Utc::now(),
             tokens: user_tokens,
         });
-        
+
         // Prepare messages for API
         let api_messages = self.prepare_api_messages(conversation)?;
-        
+
         // Create request with optional custom config
         let config = config.unwrap_or_default();
         let request = CreateChatCompletionRequestArgs::default()
@@ -155,28 +152,38 @@ impl ConversationManager {
             .temperature(config.temperature)
             .max_tokens(config.max_tokens)
             .build()?;
-        
+
         // Make API call
-        let response = self.client.chat().create(request).await
+        let response = self
+            .client
+            .chat()
+            .create(request)
+            .await
             .context("Failed to get conversation response")?;
-        
+
         // Extract response
-        let assistant_message = response.choices.first()
+        let assistant_message = response
+            .choices
+            .first()
             .and_then(|choice| choice.message.content.clone())
             .unwrap_or_default();
-        
+
         // Track tokens
         let model_name = config.model.as_str();
         if let Some(usage) = response.usage {
-            self.token_counter.lock().await.record_usage(
-                model_name,
-                usage.prompt_tokens as usize,
-                usage.completion_tokens as usize,
-            ).await?;
-            
+            self.token_counter
+                .lock()
+                .await
+                .record_usage(
+                    model_name,
+                    usage.prompt_tokens as usize,
+                    usage.completion_tokens as usize,
+                )
+                .await?;
+
             conversation.total_tokens += usage.total_tokens as usize;
         }
-        
+
         // Add assistant message
         let assistant_tokens = self.estimate_tokens(&assistant_message).await?;
         conversation.messages.push_back(ConversationMessage {
@@ -185,15 +192,15 @@ impl ConversationManager {
             timestamp: Utc::now(),
             tokens: assistant_tokens,
         });
-        
+
         // Trim context if needed
         self.trim_context(conversation);
-        
+
         conversation.updated_at = Utc::now();
-        
+
         Ok(assistant_message)
     }
-    
+
     /// Update conversation context (e.g., after blend changes)
     pub async fn update_context(
         &self,
@@ -207,19 +214,21 @@ impl ConversationManager {
         }
         Ok(())
     }
-    
+
     /// Get conversation history
     pub async fn get_conversation(&self, conversation_id: &str) -> Result<Conversation> {
         let conversations = self.conversations.lock().await;
-        conversations.get(conversation_id)
+        conversations
+            .get(conversation_id)
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("Conversation not found"))
     }
-    
+
     /// List all conversations
     pub async fn list_conversations(&self) -> Result<Vec<ConversationSummary>> {
         let conversations = self.conversations.lock().await;
-        let mut summaries: Vec<_> = conversations.values()
+        let mut summaries: Vec<_> = conversations
+            .values()
             .map(|conv| ConversationSummary {
                 id: conv.id.clone(),
                 title: conv.title.clone(),
@@ -229,32 +238,38 @@ impl ConversationManager {
                 total_tokens: conv.total_tokens,
             })
             .collect();
-        
+
         summaries.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
         Ok(summaries)
     }
-    
+
     /// Delete a conversation
     pub async fn delete_conversation(&self, conversation_id: &str) -> Result<()> {
         self.conversations.lock().await.remove(conversation_id);
         Ok(())
     }
-    
+
     /// Prepare messages for API call
-    fn prepare_api_messages(&self, conversation: &Conversation) -> Result<Vec<ChatCompletionRequestMessage>> {
+    fn prepare_api_messages(
+        &self,
+        conversation: &Conversation,
+    ) -> Result<Vec<ChatCompletionRequestMessage>> {
         let mut messages = Vec::new();
-        
+
         // Add system message if exists
-        if let Some(system_msg) = conversation.messages.iter()
-            .find(|m| matches!(m.role, MessageRole::System)) {
+        if let Some(system_msg) = conversation
+            .messages
+            .iter()
+            .find(|m| matches!(m.role, MessageRole::System))
+        {
             messages.push(
                 ChatCompletionRequestSystemMessageArgs::default()
                     .content(system_msg.content.as_str())
                     .build()?
-                    .into()
+                    .into(),
             );
         }
-        
+
         // Add context summary if needed
         if let Some(game_context) = &conversation.context.game_concept {
             let context_summary = format!(
@@ -263,7 +278,7 @@ impl ConversationManager {
                 game_context.genre,
                 game_context.inspirations.join(", ")
             );
-            
+
             if let Some(blend) = &game_context.current_blend {
                 let blend_summary = format!(
                     "\nCurrent blend: {} with dominant attributes: {}",
@@ -274,61 +289,67 @@ impl ConversationManager {
                     ChatCompletionRequestSystemMessageArgs::default()
                         .content(format!("{}{}", context_summary, blend_summary).as_str())
                         .build()?
-                        .into()
+                        .into(),
                 );
             }
         }
-        
+
         // Add conversation messages (skip system messages as they're already added)
-        for msg in conversation.messages.iter()
+        for msg in conversation
+            .messages
+            .iter()
             .filter(|m| !matches!(m.role, MessageRole::System))
-            .take(conversation.context.max_context_messages) {
-            
+            .take(conversation.context.max_context_messages)
+        {
             match msg.role {
                 MessageRole::User => {
                     messages.push(
                         ChatCompletionRequestUserMessageArgs::default()
-                                .content(msg.content.as_str())
+                            .content(msg.content.as_str())
                             .build()?
-                            .into()
+                            .into(),
                     );
                 }
                 MessageRole::Assistant => {
                     messages.push(
                         ChatCompletionRequestAssistantMessageArgs::default()
-                                .content(msg.content.as_str())
+                            .content(msg.content.as_str())
                             .build()?
-                            .into()
+                            .into(),
                     );
                 }
                 _ => {}
             }
         }
-        
+
         Ok(messages)
     }
-    
+
     /// Trim conversation context to stay within limits
     fn trim_context(&self, conversation: &mut Conversation) {
         let max_messages = conversation.context.max_context_messages;
-        
+
         // Keep system message + last N messages
-        let system_count = conversation.messages.iter()
+        let system_count = conversation
+            .messages
+            .iter()
             .filter(|m| matches!(m.role, MessageRole::System))
             .count();
-        
+
         let max_non_system = max_messages.saturating_sub(system_count);
-        
+
         // Count non-system messages
-        let non_system_count = conversation.messages.iter()
+        let non_system_count = conversation
+            .messages
+            .iter()
             .filter(|m| !matches!(m.role, MessageRole::System))
             .count();
-        
+
         // Remove oldest non-system messages if we exceed the limit
         if non_system_count > max_non_system {
             let to_remove = non_system_count - max_non_system;
             let mut removed = 0;
-            
+
             // Remove from the front (oldest messages)
             while removed < to_remove {
                 for i in 0..conversation.messages.len() {
@@ -349,17 +370,17 @@ impl AiGenerator for ConversationManager {
         let counter = self.token_counter.lock().await;
         counter.count_tokens(request, "gpt-4-turbo")
     }
-    
+
     async fn estimate_cost(&self, request: &str) -> Result<f64> {
         let counter = self.token_counter.lock().await;
         counter.estimate_cost(request, "gpt-4-turbo", 2000)
     }
-    
+
     async fn is_cached(&self, _key: &str) -> bool {
         // Conversations are not typically cached
         false
     }
-    
+
     async fn clear_cache(&self, _key: &str) -> Result<()> {
         // No cache to clear for conversations
         Ok(())

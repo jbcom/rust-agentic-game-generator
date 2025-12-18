@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AiRequestType","AiResult","AiTask","AudioType"],"struct":["AiClient","AiRequest","BlendData","GeneratedContent","UsageStats"],"trait":["BlendAiIntegration"]};

@@ -1,5 +1,5 @@
 //! Audio generation module for game music and sound effects
-//! 
+//!
 //! Features:
 //! - 16-bit style chiptune music generation
 //! - Sound effect generation with retro constraints
@@ -8,9 +8,12 @@
 
 use anyhow::{Context, Result};
 use async_openai::{
-    Client, 
+    Client,
     config::OpenAIConfig,
-    types::{CreateChatCompletionRequestArgs, ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs},
+    types::{
+        ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
+        CreateChatCompletionRequestArgs,
+    },
 };
 use minijinja::Environment;
 use serde::{Deserialize, Serialize};
@@ -19,7 +22,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use super::{AiGenerator, cache::{AiCache, CachedData}, tokens::TokenCounter};
+use super::{
+    AiGenerator,
+    cache::{AiCache, CachedData},
+    tokens::TokenCounter,
+};
 
 /// Audio generator for music and sound effects
 #[derive(Clone)]
@@ -81,7 +88,7 @@ impl AudioConfig {
             ],
         }
     }
-    
+
     /// Configuration for exploration music
     pub fn for_exploration() -> Self {
         Self {
@@ -97,7 +104,7 @@ impl AudioConfig {
             ],
         }
     }
-    
+
     /// Configuration for menu/UI sounds
     pub fn for_ui() -> Self {
         Self {
@@ -119,19 +126,31 @@ impl AudioGenerator {
         token_counter: Arc<Mutex<TokenCounter>>,
     ) -> Self {
         let mut env = Environment::new();
-        
+
         // Load all audio prompt templates
         let templates = [
-            ("theme_song", include_str!("../prompts/audio/theme_song.jinja")),
-            ("battle_music", include_str!("../prompts/audio/battle_music.jinja")),
-            ("victory_fanfare", include_str!("../prompts/audio/victory_fanfare.jinja")),
-            ("sound_effect", include_str!("../prompts/audio/sound_effect.jinja")),
+            (
+                "theme_song",
+                include_str!("../prompts/audio/theme_song.jinja"),
+            ),
+            (
+                "battle_music",
+                include_str!("../prompts/audio/battle_music.jinja"),
+            ),
+            (
+                "victory_fanfare",
+                include_str!("../prompts/audio/victory_fanfare.jinja"),
+            ),
+            (
+                "sound_effect",
+                include_str!("../prompts/audio/sound_effect.jinja"),
+            ),
         ];
-        
+
         for (name, template) in templates {
             env.add_template(name, template).ok();
         }
-        
+
         Self {
             client,
             cache,
@@ -139,7 +158,7 @@ impl AudioGenerator {
             template_env: Arc::new(Mutex::new(env)),
         }
     }
-    
+
     /// Generate music track description (to be converted to MIDI/audio externally)
     pub async fn generate_music_description(
         &self,
@@ -153,7 +172,7 @@ impl AudioGenerator {
             "theme" | "main" => "theme_song",
             _ => "theme_song", // default
         };
-        
+
         // Prepare context for template
         let context = json!({
             "game_name": "Vintage RPG",
@@ -172,31 +191,36 @@ impl AudioGenerator {
             "genre": "16-bit RPG",
             "constraints": "Use only retro synthesizer sounds, chiptune elements",
         });
-        
+
         // Generate cache key
         let mut params = HashMap::new();
         params.insert("type".to_string(), music_type.to_string());
         params.insert("style".to_string(), config.style.clone());
         params.insert("tempo".to_string(), config.tempo.to_string());
-        
-        let cache_key = self.cache.lock().await.generate_key("audio_music", template_name, &params);
-        
+
+        let cache_key = self
+            .cache
+            .lock()
+            .await
+            .generate_key("audio_music", template_name, &params);
+
         // Check cache
-        if let Some(cached) = self.cache.lock().await.get(&cache_key).await {
-            if let CachedData::Text(data) = &cached.data {
-                if let Ok(description) = serde_json::from_str::<MusicDescription>(data) {
-                    return Ok(description);
-                }
-            }
+        if let Some(cached) = self.cache.lock().await.get(&cache_key).await
+            && let CachedData::Text(data) = &cached.data
+            && let Ok(description) = serde_json::from_str::<MusicDescription>(data)
+        {
+            return Ok(description);
         }
-        
+
         // Render template
         let env = self.template_env.lock().await;
-        let template = env.get_template(template_name)
+        let template = env
+            .get_template(template_name)
             .context("Failed to get audio template")?;
-        let prompt = template.render(&context)
+        let prompt = template
+            .render(&context)
             .context("Failed to render audio template")?;
-        
+
         // Create message
         let messages = vec![
             ChatCompletionRequestSystemMessageArgs::default()
@@ -208,7 +232,7 @@ impl AudioGenerator {
                 .build()?
                 .into(),
         ];
-        
+
         // Make API call
         let request = CreateChatCompletionRequestArgs::default()
             .model("gpt-4o-mini")
@@ -216,47 +240,60 @@ impl AudioGenerator {
             .temperature(0.8)
             .max_tokens(2000u32)
             .build()?;
-        
+
         let response = self.client.chat().create(request).await?;
-        let content = response.choices.first()
+        let content = response
+            .choices
+            .first()
             .and_then(|c| c.message.content.as_ref())
             .ok_or_else(|| anyhow::anyhow!("No response content"))?;
-        
+
         // Parse response into structured format
         let description = self.parse_music_description(content, music_type, &config)?;
-        
+
         // Cache result
         let cache_data = serde_json::to_string(&description)?;
         let mut cache_params = HashMap::new();
         for (k, v) in params {
             cache_params.insert(k, serde_json::Value::String(v));
         }
-        self.cache.lock().await.put(
-            cache_key,
-            CachedData::Text(cache_data),
-            cache_params,
-        ).await?;
-        
+        self.cache
+            .lock()
+            .await
+            .put(cache_key, CachedData::Text(cache_data), cache_params)
+            .await?;
+
         // Track usage
         if let Some(usage) = response.usage {
-            self.token_counter.lock().await.record_usage(
-                "gpt-4o-mini",
-                usage.prompt_tokens as usize,
-                usage.completion_tokens as usize,
-            ).await?;
+            self.token_counter
+                .lock()
+                .await
+                .record_usage(
+                    "gpt-4o-mini",
+                    usage.prompt_tokens as usize,
+                    usage.completion_tokens as usize,
+                )
+                .await?;
         }
-        
+
         Ok(description)
     }
-    
+
     /// Parse AI response into structured music description
-    fn parse_music_description(&self, content: &str, music_type: &str, config: &AudioConfig) -> Result<MusicDescription> {
+    fn parse_music_description(
+        &self,
+        content: &str,
+        music_type: &str,
+        config: &AudioConfig,
+    ) -> Result<MusicDescription> {
         // Try to extract sections from the response
         let mut sections = Vec::new();
-        
+
         // Common section patterns to look for
-        let section_patterns = ["intro", "verse", "chorus", "bridge", "outro", "main", "loop"];
-        
+        let section_patterns = [
+            "intro", "verse", "chorus", "bridge", "outro", "main", "loop",
+        ];
+
         for pattern in &section_patterns {
             if content.to_lowercase().contains(pattern) {
                 sections.push(MusicSection {
@@ -266,7 +303,7 @@ impl AudioGenerator {
                 });
             }
         }
-        
+
         // Ensure we have at least basic structure
         if sections.is_empty() {
             sections = vec![
@@ -287,7 +324,7 @@ impl AudioGenerator {
                 },
             ];
         }
-        
+
         Ok(MusicDescription {
             title: format!("{} - {}", capitalize_first(music_type), config.style),
             style: config.style.clone(),
@@ -299,7 +336,7 @@ impl AudioGenerator {
             notes: content.to_string(),
         })
     }
-    
+
     /// Generate sound effect description
     pub async fn generate_sound_effect(
         &self,
@@ -314,30 +351,35 @@ impl AudioGenerator {
             "waveforms": ["square", "triangle", "sawtooth", "noise"],
             "console": "SNES/Genesis era",
         });
-        
+
         // Generate cache key
         let mut params = HashMap::new();
         params.insert("type".to_string(), effect_type.to_string());
         params.insert("duration".to_string(), duration.to_string());
-        
-        let cache_key = self.cache.lock().await.generate_key("audio_sfx", effect_type, &params);
-        
+
+        let cache_key = self
+            .cache
+            .lock()
+            .await
+            .generate_key("audio_sfx", effect_type, &params);
+
         // Check cache
-        if let Some(cached) = self.cache.lock().await.get(&cache_key).await {
-            if let CachedData::Text(data) = &cached.data {
-                if let Ok(sfx) = serde_json::from_str::<SoundEffectDescription>(data) {
-                    return Ok(sfx);
-                }
-            }
+        if let Some(cached) = self.cache.lock().await.get(&cache_key).await
+            && let CachedData::Text(data) = &cached.data
+            && let Ok(sfx) = serde_json::from_str::<SoundEffectDescription>(data)
+        {
+            return Ok(sfx);
         }
-        
+
         // Render template
         let env = self.template_env.lock().await;
-        let template = env.get_template("sound_effect")
+        let template = env
+            .get_template("sound_effect")
             .context("Failed to get sound effect template")?;
-        let prompt = template.render(&context)
+        let prompt = template
+            .render(&context)
             .context("Failed to render sound effect template")?;
-        
+
         // Create message
         let messages = vec![
             ChatCompletionRequestSystemMessageArgs::default()
@@ -349,7 +391,7 @@ impl AudioGenerator {
                 .build()?
                 .into(),
         ];
-        
+
         // Make API call
         let request = CreateChatCompletionRequestArgs::default()
             .model("gpt-4o-mini")
@@ -357,41 +399,52 @@ impl AudioGenerator {
             .temperature(0.7)
             .max_tokens(1000u32)
             .build()?;
-        
+
         let response = self.client.chat().create(request).await?;
-        let content = response.choices.first()
+        let content = response
+            .choices
+            .first()
             .and_then(|c| c.message.content.as_ref())
             .ok_or_else(|| anyhow::anyhow!("No response content"))?;
-        
+
         // Parse response
         let sfx = self.parse_sound_effect(content, effect_type, duration)?;
-        
+
         // Cache result
         let cache_data = serde_json::to_string(&sfx)?;
         let mut cache_params = HashMap::new();
         for (k, v) in params {
             cache_params.insert(k, serde_json::Value::String(v));
         }
-        self.cache.lock().await.put(
-            cache_key,
-            CachedData::Text(cache_data),
-            cache_params,
-        ).await?;
-        
+        self.cache
+            .lock()
+            .await
+            .put(cache_key, CachedData::Text(cache_data), cache_params)
+            .await?;
+
         // Track usage
         if let Some(usage) = response.usage {
-            self.token_counter.lock().await.record_usage(
-                "gpt-4o-mini",
-                usage.prompt_tokens as usize,
-                usage.completion_tokens as usize,
-            ).await?;
+            self.token_counter
+                .lock()
+                .await
+                .record_usage(
+                    "gpt-4o-mini",
+                    usage.prompt_tokens as usize,
+                    usage.completion_tokens as usize,
+                )
+                .await?;
         }
-        
+
         Ok(sfx)
     }
-    
+
     /// Parse AI response into structured sound effect
-    fn parse_sound_effect(&self, content: &str, effect_type: &str, duration: f32) -> Result<SoundEffectDescription> {
+    fn parse_sound_effect(
+        &self,
+        content: &str,
+        effect_type: &str,
+        duration: f32,
+    ) -> Result<SoundEffectDescription> {
         // Extract waveform type
         let waveform = if content.contains("square") {
             "square"
@@ -403,15 +456,16 @@ impl AudioGenerator {
             "noise"
         } else {
             "square" // default
-        }.to_string();
-        
+        }
+        .to_string();
+
         // Extract frequency values (look for Hz mentions)
         let freq_start = self.extract_frequency(content, "start", 440.0);
         let freq_end = self.extract_frequency(content, "end", freq_start / 2.0);
-        
+
         // Extract ADSR values
         let envelope = self.extract_envelope(content, duration);
-        
+
         // Extract effects
         let mut effects = Vec::new();
         if content.contains("echo") || content.contains("delay") {
@@ -423,7 +477,7 @@ impl AudioGenerator {
         if content.contains("pitch") && content.contains("bend") {
             effects.push("pitch_bend".to_string());
         }
-        
+
         Ok(SoundEffectDescription {
             name: effect_type.to_string(),
             duration,
@@ -434,37 +488,35 @@ impl AudioGenerator {
             effects,
         })
     }
-    
+
     /// Extract frequency value from text
     fn extract_frequency(&self, text: &str, context: &str, default: f32) -> f32 {
         // Simple regex to find frequency values
         let pattern = format!(r"{}[^\d]*(\d+)\s*[Hh]z", context);
-        if let Ok(re) = regex::Regex::new(&pattern) {
-            if let Some(cap) = re.captures(text) {
-                if let Some(freq_str) = cap.get(1) {
-                    if let Ok(freq) = freq_str.as_str().parse::<f32>() {
-                        return freq;
-                    }
-                }
-            }
+        if let Ok(re) = regex::Regex::new(&pattern)
+            && let Some(cap) = re.captures(text)
+            && let Some(freq_str) = cap.get(1)
+            && let Ok(freq) = freq_str.as_str().parse::<f32>()
+        {
+            return freq;
         }
-        
+
         // Look for general frequency mentions
-        if text.contains(&format!("{} frequency", context)) {
-            if let Ok(re) = regex::Regex::new(r"(\d+)\s*[Hh]z") {
-                for cap in re.captures_iter(text) {
-                    if let Some(freq_str) = cap.get(1) {
-                        if let Ok(freq) = freq_str.as_str().parse::<f32>() {
-                            return freq;
-                        }
-                    }
+        if text.contains(&format!("{} frequency", context))
+            && let Ok(re) = regex::Regex::new(r"(\d+)\s*[Hh]z")
+        {
+            for cap in re.captures_iter(text) {
+                if let Some(freq_str) = cap.get(1)
+                    && let Ok(freq) = freq_str.as_str().parse::<f32>()
+                {
+                    return freq;
                 }
             }
         }
-        
+
         default
     }
-    
+
     /// Extract ADSR envelope from text
     fn extract_envelope(&self, text: &str, total_duration: f32) -> AmplitudeEnvelope {
         // Default ADSR values as percentages of total duration
@@ -472,20 +524,20 @@ impl AudioGenerator {
         let mut decay = 0.1;
         let mut sustain = 0.5;
         let mut release = 0.2;
-        
+
         // Look for specific ADSR mentions
         if text.contains("fast attack") || text.contains("immediate") {
             attack = 0.001;
         } else if text.contains("slow attack") {
             attack = 0.1;
         }
-        
+
         if text.contains("long decay") {
             decay = 0.3;
         } else if text.contains("short decay") || text.contains("quick decay") {
             decay = 0.05;
         }
-        
+
         if text.contains("sustain") {
             if text.contains("high sustain") {
                 sustain = 0.8;
@@ -493,13 +545,13 @@ impl AudioGenerator {
                 sustain = 0.3;
             }
         }
-        
+
         if text.contains("long release") || text.contains("fade") {
             release = 0.5;
         } else if text.contains("short release") || text.contains("cut") {
             release = 0.05;
         }
-        
+
         // Scale by actual duration
         AmplitudeEnvelope {
             attack: attack * total_duration.min(1.0),
@@ -508,7 +560,7 @@ impl AudioGenerator {
             release: release * total_duration.min(1.0),
         }
     }
-    
+
     /// Generate a set of related sound effects
     pub async fn generate_sound_effect_set(
         &self,
@@ -516,13 +568,13 @@ impl AudioGenerator {
         effects: Vec<String>,
     ) -> Result<HashMap<String, SoundEffectDescription>> {
         let mut results = HashMap::new();
-        
+
         for effect in effects {
             let themed_effect = format!("{} {}", theme, effect);
             let description = self.generate_sound_effect(&themed_effect, 0.5).await?;
             results.insert(effect, description);
         }
-        
+
         Ok(results)
     }
 }
@@ -533,16 +585,16 @@ impl AiGenerator for AudioGenerator {
         // Audio generation typically uses less tokens for descriptions
         Ok(request.len() / 4)
     }
-    
+
     async fn estimate_cost(&self, _request: &str) -> Result<f64> {
         // Placeholder cost estimation
         Ok(0.01)
     }
-    
+
     async fn is_cached(&self, key: &str) -> bool {
         self.cache.lock().await.get(key).await.is_some()
     }
-    
+
     async fn clear_cache(&self, key: &str) -> Result<()> {
         self.cache.lock().await.clear(key).await
     }
@@ -593,7 +645,7 @@ pub struct AmplitudeEnvelope {
 /// Retro audio constraints
 pub mod constraints {
     use super::*;
-    
+
     /// SNES audio constraints
     pub fn snes_constraints() -> AudioConstraints {
         AudioConstraints {
@@ -608,7 +660,7 @@ pub mod constraints {
             ],
         }
     }
-    
+
     /// Genesis/Mega Drive constraints
     pub fn genesis_constraints() -> AudioConstraints {
         AudioConstraints {
@@ -619,7 +671,7 @@ pub mod constraints {
             effects: vec!["vibrato".to_string(), "tremolo".to_string()],
         }
     }
-    
+
     /// NES constraints
     pub fn nes_constraints() -> AudioConstraints {
         AudioConstraints {

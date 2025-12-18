@@ -1,5 +1,5 @@
 //! Image generation module optimized for 16-bit nostalgic game art
-//! 
+//!
 //! Features:
 //! - Style consistency across all generated assets
 //! - Sprite sheet optimization
@@ -11,13 +11,7 @@ use anyhow::{Context, Result};
 use async_openai::{
     Client,
     config::OpenAIConfig,
-    types::{
-        CreateImageRequestArgs,
-        ImageModel,
-        ImageQuality,
-        ImageSize,
-        ImageResponseFormat,
-    },
+    types::{CreateImageRequestArgs, ImageModel, ImageQuality, ImageResponseFormat, ImageSize},
 };
 use base64::Engine;
 use image::{DynamicImage, GenericImageView, Rgba, RgbaImage};
@@ -31,8 +25,8 @@ use tokio::sync::{Mutex, Semaphore};
 use super::{
     AiGenerator,
     cache::{AiCache, ImageCache},
+    consistency::{Color, ColorPalette, StyleManager},
     tokens::TokenCounter,
-    consistency::{StyleManager, ColorPalette, Color},
 };
 
 /// Image generator with style consistency
@@ -89,7 +83,7 @@ impl ImageConfig {
             enforce_consistency: true,
         }
     }
-    
+
     /// Configuration for background/tileset generation
     pub fn for_backgrounds() -> Self {
         Self {
@@ -101,7 +95,7 @@ impl ImageConfig {
             enforce_consistency: true,
         }
     }
-    
+
     /// Configuration for UI elements
     pub fn for_ui() -> Self {
         Self {
@@ -124,24 +118,29 @@ impl ImageGenerator {
         style_manager: Arc<Mutex<StyleManager>>,
     ) -> Self {
         // Extract the inner AiCache from the Mutex
-        let inner_cache = cache.try_lock().ok()
-            .and_then(|guard| Some(Arc::new(guard.clone())))
+        let inner_cache = cache
+            .try_lock()
+            .ok()
+            .map(|guard| Arc::new(guard.clone()))
             .unwrap_or_else(|| Arc::new(AiCache::new().unwrap()));
         let image_cache = ImageCache::new(inner_cache);
-        
+
         let mut env = Environment::new();
-        
+
         // Load all image prompt templates
         let templates = [
-            ("style_guide", include_str!("../prompts/image/style_guide.jinja")),
+            (
+                "style_guide",
+                include_str!("../prompts/image/style_guide.jinja"),
+            ),
             ("sprite", include_str!("../prompts/image/sprite.jinja")),
             ("tileset", include_str!("../prompts/image/tileset.jinja")),
         ];
-        
+
         for (name, template) in templates {
             env.add_template(name, template).ok();
         }
-        
+
         Self {
             client,
             cache,
@@ -152,11 +151,11 @@ impl ImageGenerator {
             template_env: Arc::new(Mutex::new(env)),
         }
     }
-    
+
     /// Generate a style guide that establishes visual consistency
     pub async fn generate_style_guide(&self, concept: &GameConcept) -> Result<Vec<u8>> {
         let style_config = self.style_manager.lock().await.get_style().await;
-        
+
         // Prepare context for template
         let context = json!({
             "genre": concept.genre,
@@ -172,28 +171,32 @@ impl ImageGenerator {
             "mood": concept.mood,
             "style_name": style_config.style_name,
         });
-        
+
         // Render template
         let env = self.template_env.lock().await;
-        let template = env.get_template("style_guide")
+        let template = env
+            .get_template("style_guide")
             .context("Failed to get style guide template")?;
-        let style_guide_prompt = template.render(&context)
+        let style_guide_prompt = template
+            .render(&context)
             .context("Failed to render style guide template")?;
-        
+
         // Generate with validation
-        let result = self.generate_with_validation(
-            &style_guide_prompt,
-            ImageConfig::for_sprites(),
-            ValidationCriteria::StyleGuide,
-            5, // max attempts
-        ).await?;
-        
+        let result = self
+            .generate_with_validation(
+                &style_guide_prompt,
+                ImageConfig::for_sprites(),
+                ValidationCriteria::StyleGuide,
+                5, // max attempts
+            )
+            .await?;
+
         // Extract and store style information
         self.extract_style_information(&result).await?;
-        
+
         Ok(result)
     }
-    
+
     /// Generate a sprite with enforced consistency
     pub async fn generate_sprite(
         &self,
@@ -202,11 +205,15 @@ impl ImageGenerator {
         _style_guide: Option<&[u8]>,
     ) -> Result<Vec<u8>> {
         let style_config = self.style_manager.lock().await.get_style().await;
-        
+
         // Get style-consistent description
-        let styled_description = self.style_manager.lock().await
-            .create_style_prompt(description).await?;
-        
+        let styled_description = self
+            .style_manager
+            .lock()
+            .await
+            .create_style_prompt(description)
+            .await?;
+
         // Prepare context for template
         let context = json!({
             "sprite_type": sprite_type,
@@ -219,28 +226,32 @@ impl ImageGenerator {
             "perspective": self.format_perspective(&style_config.rules.perspective),
             "visual_style": style_config.style_name,
         });
-        
+
         // Render template
         let env = self.template_env.lock().await;
-        let template = env.get_template("sprite")
+        let template = env
+            .get_template("sprite")
             .context("Failed to get sprite template")?;
-        let prompt = template.render(&context)
+        let prompt = template
+            .render(&context)
             .context("Failed to render sprite template")?;
-        
+
         // Generate with validation
-        let sprite = self.generate_with_validation(
-            &prompt,
-            ImageConfig::for_sprites(),
-            ValidationCriteria::Sprite(sprite_type.to_string()),
-            3,
-        ).await?;
-        
+        let sprite = self
+            .generate_with_validation(
+                &prompt,
+                ImageConfig::for_sprites(),
+                ValidationCriteria::Sprite(sprite_type.to_string()),
+                3,
+            )
+            .await?;
+
         // Post-process for consistency
         let processed = self.enforce_palette_consistency(&sprite).await?;
-        
+
         Ok(processed)
     }
-    
+
     /// Generate multiple sprites as a batch
     pub async fn generate_sprite_batch(
         &self,
@@ -248,24 +259,22 @@ impl ImageGenerator {
     ) -> Result<HashMap<String, Vec<u8>>> {
         let mut results = HashMap::new();
         let mut tasks = Vec::new();
-        
+
         for request in requests {
             let generator = self.clone();
             let permit = self.batch_semaphore.clone().acquire_owned().await?;
-            
+
             let task = tokio::spawn(async move {
                 let _permit = permit; // Hold permit until done
-                let result = generator.generate_sprite(
-                    &request.sprite_type,
-                    &request.description,
-                    None,
-                ).await;
+                let result = generator
+                    .generate_sprite(&request.sprite_type, &request.description, None)
+                    .await;
                 (request.name, result)
             });
-            
+
             tasks.push(task);
         }
-        
+
         // Collect results
         for task in tasks {
             let (name, result) = task.await?;
@@ -278,10 +287,10 @@ impl ImageGenerator {
                 }
             }
         }
-        
+
         Ok(results)
     }
-    
+
     /// Generate with validation and retry
     async fn generate_with_validation(
         &self,
@@ -292,21 +301,21 @@ impl ImageGenerator {
     ) -> Result<Vec<u8>> {
         let mut best_result = None;
         let mut best_score = 0.0;
-        
+
         for attempt in 0..max_attempts {
             match self.generate_single(prompt, config.clone()).await {
                 Ok(data) => {
                     let validation = self.validate_image(&data, &criteria).await?;
-                    
+
                     if validation.passed {
                         return Ok(data);
                     }
-                    
+
                     if validation.score > best_score {
                         best_score = validation.score;
                         best_result = Some(data);
                     }
-                    
+
                     // Add feedback to prompt for next attempt
                     if attempt < max_attempts - 1 {
                         tracing::info!(
@@ -323,14 +332,22 @@ impl ImageGenerator {
                     }
                 }
             }
-            
+
             // Exponential backoff
-            tokio::time::sleep(tokio::time::Duration::from_millis(100 * (attempt + 1) as u64)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(
+                100 * (attempt + 1) as u64,
+            ))
+            .await;
         }
-        
-        best_result.ok_or_else(|| anyhow::anyhow!("Failed to generate valid image after {} attempts", max_attempts))
+
+        best_result.ok_or_else(|| {
+            anyhow::anyhow!(
+                "Failed to generate valid image after {} attempts",
+                max_attempts
+            )
+        })
     }
-    
+
     /// Generate a single image
     pub async fn generate_single(&self, prompt: &str, config: ImageConfig) -> Result<Vec<u8>> {
         // Check cache first
@@ -338,13 +355,21 @@ impl ImageGenerator {
         params.insert("model".to_string(), format!("{:?}", config.model));
         params.insert("size".to_string(), format!("{:?}", config.size));
         params.insert("quality".to_string(), format!("{:?}", config.quality));
-        
-        let cache_key = self.cache.lock().await.generate_key("image", prompt, &params);
-        
-        if let Some(cached_data) = self.image_cache.get_image(&cache_key, super::cache::ImageFormat::Png).await {
+
+        let cache_key = self
+            .cache
+            .lock()
+            .await
+            .generate_key("image", prompt, &params);
+
+        if let Some(cached_data) = self
+            .image_cache
+            .get_image(&cache_key, super::cache::ImageFormat::Png)
+            .await
+        {
             return Ok(cached_data);
         }
-        
+
         // Create request
         let request = CreateImageRequestArgs::default()
             .prompt(prompt)
@@ -352,49 +377,66 @@ impl ImageGenerator {
             .n(config.n)
             .quality(config.quality.clone())
             .response_format(config.response_format)
-            .size(config.size.clone())
+            .size(config.size)
             .build()?;
-        
+
         // Make API call
-        let response = self.client.images().create(request).await
+        let response = self
+            .client
+            .images()
+            .create(request)
+            .await
             .context("Failed to generate image")?;
-        
+
         // Extract image data from the response
-        let image_data = response.data.first()
+        let image_data = response
+            .data
+            .first()
             .ok_or_else(|| anyhow::anyhow!("No image data in response"))?;
-        
+
         // The async-openai Image type is an enum with Url and B64Json variants
         let image_bytes = match image_data.as_ref() {
             async_openai::types::Image::B64Json { b64_json, .. } => {
-                base64::engine::general_purpose::STANDARD.decode(b64_json.as_ref())
+                base64::engine::general_purpose::STANDARD
+                    .decode(b64_json.as_ref())
                     .context("Failed to decode base64 image data")?
-            },
+            }
             async_openai::types::Image::Url { url, .. } => {
                 // If we got a URL instead, we need to fetch it
                 anyhow::bail!("Expected base64 data but got URL: {}", url);
-            },
+            }
         };
-        
-        
+
         // Track usage
         let model_name = match config.quality {
             ImageQuality::HD => "dall-e-3-hd",
             _ => "dall-e-3",
         };
-        self.token_counter.lock().await.record_image_generation(model_name, 1).await?;
-        
+        self.token_counter
+            .lock()
+            .await
+            .record_image_generation(model_name, 1)
+            .await?;
+
         // Cache result
-        let cache_params: HashMap<String, serde_json::Value> = params.into_iter()
+        let cache_params: HashMap<String, serde_json::Value> = params
+            .into_iter()
             .map(|(k, v)| (k, serde_json::Value::String(v)))
             .collect();
-        
-        self.image_cache.put_image(cache_key, image_bytes.clone(), cache_params).await?;
-        
+
+        self.image_cache
+            .put_image(cache_key, image_bytes.clone(), cache_params)
+            .await?;
+
         Ok(image_bytes)
     }
-    
+
     /// Validate generated image
-    async fn validate_image(&self, data: &[u8], criteria: &ValidationCriteria) -> Result<ValidationResult> {
+    async fn validate_image(
+        &self,
+        data: &[u8],
+        criteria: &ValidationCriteria,
+    ) -> Result<ValidationResult> {
         let img = image::load_from_memory(data)?;
         let mut result = ValidationResult {
             passed: true,
@@ -402,106 +444,111 @@ impl ImageGenerator {
             issues: Vec::new(),
             suggestions: Vec::new(),
         };
-        
+
         // Check dimensions
         let (width, height) = img.dimensions();
-        match criteria {
-            ValidationCriteria::Sprite(_sprite_type) => {
-                let style = self.style_manager.lock().await.get_style().await;
-                let expected_size = style.sprite_specs.character_size;
-                
-                // For sprites, we expect them to fit within reasonable bounds
-                if width > expected_size.0 * 4 || height > expected_size.1 * 4 {
-                    result.issues.push(format!(
-                        "Sprite too large: {}x{} (expected around {}x{})",
-                        width, height, expected_size.0, expected_size.1
-                    ));
-                    result.score *= 0.8;
-                }
+        if let ValidationCriteria::Sprite(_sprite_type) = criteria {
+            let style = self.style_manager.lock().await.get_style().await;
+            let expected_size = style.sprite_specs.character_size;
+
+            // For sprites, we expect them to fit within reasonable bounds
+            if width > expected_size.0 * 4 || height > expected_size.1 * 4 {
+                result.issues.push(format!(
+                    "Sprite too large: {}x{} (expected around {}x{})",
+                    width, height, expected_size.0, expected_size.1
+                ));
+                result.score *= 0.8;
             }
-            _ => {}
         }
-        
+
         // Check color count
         let color_count = self.count_unique_colors(&img);
         let style = self.style_manager.lock().await.get_style().await;
-        
+
         if color_count > style.palette.max_colors as usize * 2 {
             result.issues.push(format!(
                 "Too many colors: {} (max {})",
                 color_count, style.palette.max_colors
             ));
             result.score *= 0.7;
-            result.suggestions.push("Consider palette quantization".to_string());
+            result
+                .suggestions
+                .push("Consider palette quantization".to_string());
         }
-        
+
         // Check for anti-aliasing
         if self.has_anti_aliasing(&img) {
-            result.issues.push("Detected anti-aliasing or soft edges".to_string());
+            result
+                .issues
+                .push("Detected anti-aliasing or soft edges".to_string());
             result.score *= 0.6;
             result.passed = false;
         }
-        
+
         result.passed = result.score >= 0.7;
         Ok(result)
     }
-    
+
     /// Count unique colors in image
     fn count_unique_colors(&self, img: &DynamicImage) -> usize {
         let rgba = img.to_rgba8();
         let mut colors = std::collections::HashSet::new();
-        
+
         for pixel in rgba.pixels() {
-            if pixel[3] > 0 { // Ignore fully transparent
+            if pixel[3] > 0 {
+                // Ignore fully transparent
                 colors.insert((pixel[0], pixel[1], pixel[2]));
             }
         }
-        
+
         colors.len()
     }
-    
+
     /// Check for anti-aliasing
     fn has_anti_aliasing(&self, img: &DynamicImage) -> bool {
         let rgba = img.to_rgba8();
         let (width, height) = rgba.dimensions();
-        
+
         // Sample edges between different colored pixels
-        for y in 1..height-1 {
-            for x in 1..width-1 {
+        for y in 1..height - 1 {
+            for x in 1..width - 1 {
                 let center = rgba.get_pixel(x, y);
-                
+
                 // Skip transparent pixels
                 if center[3] < 255 {
                     continue;
                 }
-                
+
                 // Check neighbors
                 for dy in -1i32..=1 {
                     for dx in -1i32..=1 {
                         if dx == 0 && dy == 0 {
                             continue;
                         }
-                        
+
                         let nx = (x as i32 + dx) as u32;
                         let ny = (y as i32 + dy) as u32;
-                        
+
                         if nx < width && ny < height {
                             let neighbor = rgba.get_pixel(nx, ny);
-                            
+
                             // Check for intermediate colors (anti-aliasing)
                             if neighbor[3] > 0 && neighbor[3] < 255 {
                                 return true; // Semi-transparent edge
                             }
-                            
+
                             // Check for gradient-like transitions
                             if neighbor != center && neighbor[3] == 255 {
                                 let diff_r = (center[0] as i32 - neighbor[0] as i32).abs();
                                 let diff_g = (center[1] as i32 - neighbor[1] as i32).abs();
                                 let diff_b = (center[2] as i32 - neighbor[2] as i32).abs();
-                                
+
                                 // If color difference is too subtle, likely anti-aliasing
-                                if diff_r < 30 && diff_g < 30 && diff_b < 30 && 
-                                   (diff_r > 0 || diff_g > 0 || diff_b > 0) {
+                                if diff_r < 30
+                                    && diff_g < 30
+                                    && diff_b < 30
+                                    && (diff_r > 0 || diff_g > 0 || diff_b > 0)
+                                {
                                     return true;
                                 }
                             }
@@ -510,22 +557,30 @@ impl ImageGenerator {
                 }
             }
         }
-        
+
         false
     }
-    
+
     /// Enforce palette consistency
     async fn enforce_palette_consistency(&self, image_data: &[u8]) -> Result<Vec<u8>> {
         let img = image::load_from_memory(image_data)?;
-        let processed = self.style_manager.lock().await.enforce_consistency(&img).await?;
-        
+        let processed = self
+            .style_manager
+            .lock()
+            .await
+            .enforce_consistency(&img)
+            .await?;
+
         // Convert back to bytes
         let mut buffer = Vec::new();
-        processed.write_to(&mut std::io::Cursor::new(&mut buffer), image::ImageFormat::Png)?;
-        
+        processed.write_to(
+            &mut std::io::Cursor::new(&mut buffer),
+            image::ImageFormat::Png,
+        )?;
+
         Ok(buffer)
     }
-    
+
     /// Extract style information from generated style guide
     async fn extract_style_information(&self, _style_guide_data: &[u8]) -> Result<()> {
         // This would analyze the style guide image and extract:
@@ -533,13 +588,13 @@ impl ImageGenerator {
         // - Shading patterns
         // - Outline styles
         // - Common motifs
-        
+
         // For now, we'll just note that we have a style guide
         tracing::info!("Style guide generated and stored for consistency enforcement");
-        
+
         Ok(())
     }
-    
+
     /// Format helpers (these might be better in a shared module)
     fn format_shading(&self, technique: &super::consistency::ShadingTechnique) -> &'static str {
         use super::consistency::ShadingTechnique;
@@ -551,7 +606,7 @@ impl ImageGenerator {
             ShadingTechnique::Pillow => "pillow shading",
         }
     }
-    
+
     fn format_outline(&self, style: &super::consistency::OutlineStyle) -> &'static str {
         use super::consistency::OutlineStyle;
         match style {
@@ -562,7 +617,7 @@ impl ImageGenerator {
             OutlineStyle::ColoredPerObject => "colored outline",
         }
     }
-    
+
     fn format_perspective(&self, perspective: &super::consistency::Perspective) -> &'static str {
         use super::consistency::Perspective;
         match perspective {
@@ -579,18 +634,22 @@ impl AiGenerator for ImageGenerator {
     async fn estimate_tokens(&self, _request: &str) -> Result<usize> {
         // Images don't use text tokens in the same way
         // Return estimated "token equivalent" based on image complexity
-        Ok(self.token_counter.lock().await.estimate_image_tokens(1024, 1024))
+        Ok(self
+            .token_counter
+            .lock()
+            .await
+            .estimate_image_tokens(1024, 1024))
     }
-    
+
     async fn estimate_cost(&self, _request: &str) -> Result<f64> {
         // DALL-E 3 standard quality 1024x1024
         Ok(0.04)
     }
-    
+
     async fn is_cached(&self, key: &str) -> bool {
         self.cache.lock().await.get(key).await.is_some()
     }
-    
+
     async fn clear_cache(&self, key: &str) -> Result<()> {
         self.cache.lock().await.clear(key).await
     }
@@ -636,7 +695,7 @@ pub struct GameConcept {
 /// Sprite sheet generation utilities
 pub mod sprite_sheets {
     use super::*;
-    
+
     /// Generate a complete sprite sheet for a character
     pub async fn generate_character_sheet(
         generator: &ImageGenerator,
@@ -645,28 +704,26 @@ pub mod sprite_sheets {
         animations: Vec<String>,
     ) -> Result<DynamicImage> {
         let mut sprites = Vec::new();
-        
+
         // Generate each animation frame
         for animation in &animations {
             let description = format!(
                 "{} {} character performing {} animation, 16-bit pixel art sprite",
                 character_name, character_class, animation
             );
-            
-            let sprite_data = generator.generate_sprite(
-                &format!("character_{}", animation),
-                &description,
-                None,
-            ).await?;
-            
+
+            let sprite_data = generator
+                .generate_sprite(&format!("character_{}", animation), &description, None)
+                .await?;
+
             let sprite = image::load_from_memory(&sprite_data)?;
             sprites.push(sprite);
         }
-        
+
         // Pack into sprite sheet
         pack_sprites(sprites, 2)
     }
-    
+
     /// Generate tileset for environments
     pub async fn generate_tileset(
         generator: &ImageGenerator,
@@ -674,23 +731,21 @@ pub mod sprite_sheets {
         tile_types: Vec<String>,
     ) -> Result<DynamicImage> {
         let mut tiles = Vec::new();
-        
+
         for tile_type in &tile_types {
             let description = format!(
                 "{} environment tile: {}, 16-bit pixel art, seamless tiling",
                 theme, tile_type
             );
-            
-            let tile_data = generator.generate_sprite(
-                &format!("tile_{}", tile_type),
-                &description,
-                None,
-            ).await?;
-            
+
+            let tile_data = generator
+                .generate_sprite(&format!("tile_{}", tile_type), &description, None)
+                .await?;
+
             let tile = image::load_from_memory(&tile_data)?;
             tiles.push(tile);
         }
-        
+
         pack_sprites(tiles, 0)
     }
 }
@@ -703,7 +758,7 @@ pub fn pack_sprites(sprites: Vec<DynamicImage>, padding: u32) -> Result<DynamicI
 /// Recoloring utilities for cost optimization
 pub mod recoloring {
     use super::*;
-    
+
     /// Recolor a sprite with a new palette
     pub fn recolor_sprite(
         sprite: &DynamicImage,
@@ -713,14 +768,14 @@ pub mod recoloring {
         let rgba = sprite.to_rgba8();
         let (width, height) = rgba.dimensions();
         let mut recolored = RgbaImage::new(width, height);
-        
+
         // Build color mapping
         let color_map = build_color_map(source_palette, target_palette)?;
-        
+
         // Apply recoloring
         for (x, y, pixel) in rgba.enumerate_pixels() {
             let source_color = Color::new(pixel[0], pixel[1], pixel[2]);
-            
+
             let new_color = if pixel[3] < 128 {
                 // Preserve transparency
                 *pixel
@@ -735,50 +790,51 @@ pub mod recoloring {
                     *pixel // Keep original if no mapping found
                 }
             };
-            
+
             recolored.put_pixel(x, y, new_color);
         }
-        
+
         Ok(DynamicImage::ImageRgba8(recolored))
     }
-    
+
     fn build_color_map(
         source: &ColorPalette,
         target: &ColorPalette,
     ) -> Result<HashMap<Color, Color>> {
         let mut map = HashMap::new();
-        
+
         // Map primary colors
         for (i, source_color) in source.primary_colors.iter().enumerate() {
             if let Some(target_color) = target.primary_colors.get(i) {
                 map.insert(*source_color, *target_color);
             }
         }
-        
+
         // Map secondary colors
         for (i, source_color) in source.secondary_colors.iter().enumerate() {
             if let Some(target_color) = target.secondary_colors.get(i) {
                 map.insert(*source_color, *target_color);
             }
         }
-        
+
         // Map accent colors
         for (i, source_color) in source.accent_colors.iter().enumerate() {
             if let Some(target_color) = target.accent_colors.get(i) {
                 map.insert(*source_color, *target_color);
             }
         }
-        
+
         Ok(map)
     }
-    
+
     fn find_nearest_in_palette(color: &Color, palette: &ColorPalette) -> Color {
         let mut all_colors: Vec<&Color> = Vec::new();
         all_colors.extend(&palette.primary_colors);
         all_colors.extend(&palette.secondary_colors);
         all_colors.extend(&palette.accent_colors);
-        
-        all_colors.into_iter()
+
+        all_colors
+            .into_iter()
             .min_by_key(|&p| {
                 let dr = color.r as i32 - p.r as i32;
                 let dg = color.g as i32 - p.g as i32;
@@ -786,6 +842,6 @@ pub mod recoloring {
                 dr * dr + dg * dg + db * db
             })
             .cloned()
-            .unwrap_or_else(|| color.clone())
+            .unwrap_or(*color)
     }
 }
