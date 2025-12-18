@@ -1,0 +1,24 @@
+[package]
+name = "vintage_blending_core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json.workspace = true
+petgraph.workspace = true
+anyhow.workspace = true
+
+# Optional dependencies for advanced features
+nalgebra = { version = "0.33", optional = true }
+
+[features]
+default = []
+# Enable linear algebra operations for feature vectors
+linalg = ["nalgebra"]
+
+[dev-dependencies]
+pretty_assertions = "1.4"
