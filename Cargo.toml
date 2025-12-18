@@ -1,5 +1,5 @@
 [workspace]
-members = ["vintage_ai_client"]
+members = ["vintage_ai_client", "vintage_blending_core"]
 resolver = "2"
 
 [workspace.package]
@@ -42,3 +42,6 @@ uuid = { version = "1", features = ["v4"] }
 # Bevy integration (for UI in generator app)
 bevy = { version = "0.17", default-features = false }
 bevy_egui = "0.34"
+
+# Graph algorithms (for blending)
+petgraph = "0.6"
