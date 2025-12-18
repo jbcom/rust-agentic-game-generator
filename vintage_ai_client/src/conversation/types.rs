@@ -1,9 +1,9 @@
 //! Type definitions for conversation management
 
+use async_openai::types::Role;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
-use chrono::{DateTime, Utc};
-use async_openai::types::Role;
 
 /// A single conversation thread
 #[derive(Debug, Clone, Serialize, Deserialize)]

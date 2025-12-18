@@ -1,5 +1,5 @@
 //! Style consistency management for visual assets
-//! 
+//!
 //! Ensures all generated images maintain coherent style, colors, and aesthetics
 //! Optimized for 16-bit nostalgic game art with sprite sheet support
 
@@ -17,8 +17,10 @@ pub struct StyleManager {
     /// Current style configuration
     style_config: Arc<Mutex<StyleConfig>>,
     /// Color palettes by theme
+    #[allow(dead_code)]
     palettes: Arc<Mutex<HashMap<String, ColorPalette>>>,
     /// Style embeddings for consistency
+    #[allow(dead_code)]
     embeddings: Arc<Mutex<HashMap<String, Vec<f32>>>>,
     /// Template engine for prompts
     template_engine: Arc<Environment<'static>>,
@@ -64,11 +66,16 @@ impl Color {
     pub fn new(r: u8, g: u8, b: u8) -> Self {
         Self { r, g, b, a: 255 }
     }
-    
+
     pub fn transparent() -> Self {
-        Self { r: 255, g: 0, b: 255, a: 0 }
+        Self {
+            r: 255,
+            g: 0,
+            b: 255,
+            a: 0,
+        }
     }
-    
+
     /// Convert to 16-bit color (5-6-5 RGB)
     pub fn to_16bit(&self) -> u16 {
         let r = (self.r >> 3) as u16;
@@ -76,7 +83,7 @@ impl Color {
         let b = (self.b >> 3) as u16;
         (r << 11) | (g << 5) | b
     }
-    
+
     /// Create from 16-bit color
     pub fn from_16bit(color: u16) -> Self {
         let r = ((color >> 11) & 0x1F) << 3;
@@ -172,19 +179,25 @@ pub struct UiSpecs {
     pub border_width: u32,
 }
 
+impl Default for StyleManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StyleManager {
     /// Create a new style manager
     pub fn new() -> Self {
         let default_config = StyleConfig::default_16bit_rpg();
-        
+
         // Initialize template engine
         let mut env = Environment::new();
-        
+
         // Load style consistency template
         let style_template = include_str!("../prompts/image/style_consistency.jinja");
         env.add_template("style_consistency", style_template)
             .expect("Failed to load style consistency template");
-        
+
         Self {
             style_config: Arc::new(Mutex::new(default_config)),
             palettes: Arc::new(Mutex::new(Self::default_palettes())),
@@ -192,7 +205,7 @@ impl StyleManager {
             template_engine: Arc::new(env),
         }
     }
-    
+
     /// Load a predefined style
     pub async fn load_style(&self, style_name: &str) -> Result<()> {
         let config = match style_name {
@@ -202,20 +215,20 @@ impl StyleManager {
             "nes_platformer" => StyleConfig::nes_platformer_style(),
             _ => return Err(anyhow::anyhow!("Unknown style: {}", style_name)),
         };
-        
+
         *self.style_config.lock().await = config;
         Ok(())
     }
-    
+
     /// Get current style configuration
     pub async fn get_style(&self) -> StyleConfig {
         self.style_config.lock().await.clone()
     }
-    
+
     /// Create consistent prompt additions for image generation
     pub async fn create_style_prompt(&self, base_prompt: &str) -> Result<String> {
         let config = self.style_config.lock().await;
-        
+
         // Prepare context for template
         let ctx = context! {
             base_prompt => base_prompt,
@@ -232,127 +245,127 @@ impl StyleManager {
             character_height => config.sprite_specs.character_size.1,
             constraints => config.rules.constraints.join(", ")
         };
-        
+
         // Render template
-        let template = self.template_engine
+        let template = self
+            .template_engine
             .get_template("style_consistency")
             .context("Failed to get style consistency template")?;
-        
+
         let style_prompt = template
             .render(ctx)
             .context("Failed to render style consistency template")?;
-        
+
         Ok(style_prompt)
     }
-    
+
     /// Process an image to enforce style consistency
     pub async fn enforce_consistency(&self, img: &DynamicImage) -> Result<DynamicImage> {
         let config = self.style_config.lock().await;
-        
+
         // Step 1: Quantize to palette
         let quantized = self.quantize_to_palette(img, &config.palette)?;
-        
+
         // Step 2: Apply pixel scaling if needed
         let scaled = if config.rules.pixel_size > 1 {
             self.apply_pixel_scaling(&quantized, config.rules.pixel_size)?
         } else {
             quantized
         };
-        
+
         // Step 3: Apply outline if needed
         let outlined = match &config.rules.outline_style {
             OutlineStyle::None => scaled,
             _ => self.apply_outline(&scaled, &config.rules.outline_style)?,
         };
-        
+
         // Step 4: Apply dithering if needed
         let dithered = match config.rules.dithering {
             DitheringPattern::None => outlined,
             _ => self.apply_dithering(&outlined, &config.rules.dithering)?,
         };
-        
+
         Ok(dithered)
     }
-    
+
     /// Quantize image colors to the current palette
-    fn quantize_to_palette(&self, img: &DynamicImage, palette: &ColorPalette) -> Result<DynamicImage> {
+    fn quantize_to_palette(
+        &self,
+        img: &DynamicImage,
+        palette: &ColorPalette,
+    ) -> Result<DynamicImage> {
         let rgba = img.to_rgba8();
         let (width, height) = rgba.dimensions();
-        
+
         // Collect all palette colors
         let mut all_colors = Vec::new();
         all_colors.extend(&palette.primary_colors);
         all_colors.extend(&palette.secondary_colors);
         all_colors.extend(&palette.accent_colors);
-        
+
         // Create quantized image
         let mut quantized = RgbaImage::new(width, height);
-        
+
         for (x, y, pixel) in rgba.enumerate_pixels() {
             let color = if pixel[3] < 128 {
                 // Transparent pixel
                 palette.transparency_color
             } else {
                 // Find nearest color
-                self.find_nearest_color(
-                    Color::new(pixel[0], pixel[1], pixel[2]),
-                    &all_colors
-                )
+                self.find_nearest_color(Color::new(pixel[0], pixel[1], pixel[2]), &all_colors)
             };
-            
+
             quantized.put_pixel(x, y, Rgba([color.r, color.g, color.b, color.a]));
         }
-        
+
         Ok(DynamicImage::ImageRgba8(quantized))
     }
-    
+
     /// Apply pixel scaling for retro effect
     fn apply_pixel_scaling(&self, img: &DynamicImage, scale: u32) -> Result<DynamicImage> {
         let rgba = img.to_rgba8();
         let (width, height) = rgba.dimensions();
         let new_width = width / scale;
         let new_height = height / scale;
-        
+
         // Downscale
         let small = image::imageops::resize(
             &rgba,
             new_width,
             new_height,
-            image::imageops::FilterType::Nearest
+            image::imageops::FilterType::Nearest,
         );
-        
+
         // Upscale back
-        let scaled = image::imageops::resize(
-            &small,
-            width,
-            height,
-            image::imageops::FilterType::Nearest
-        );
-        
+        let scaled =
+            image::imageops::resize(&small, width, height, image::imageops::FilterType::Nearest);
+
         Ok(DynamicImage::ImageRgba8(scaled))
     }
-    
+
     /// Apply outline to sprites
     fn apply_outline(&self, img: &DynamicImage, style: &OutlineStyle) -> Result<DynamicImage> {
         let rgba = img.to_rgba8();
         let (width, height) = rgba.dimensions();
         let mut outlined = rgba.clone();
-        
+
         let outline_color = match style {
-            OutlineStyle::SinglePixel(c) | OutlineStyle::DoublePixel(c) | OutlineStyle::Selective(c) => *c,
+            OutlineStyle::SinglePixel(c)
+            | OutlineStyle::DoublePixel(c)
+            | OutlineStyle::Selective(c) => *c,
             _ => Color::new(0, 0, 0),
         };
-        
+
         // Simple outline algorithm
-        for y in 1..height-1 {
-            for x in 1..width-1 {
+        for y in 1..height - 1 {
+            for x in 1..width - 1 {
                 let pixel = rgba.get_pixel(x, y);
-                
+
                 // Skip if not transparent
                 if pixel[3] > 128 {
                     continue;
                 }
-                
+
                 // Check neighbors
                 let mut has_opaque_neighbor = false;
                 for dy in -1i32..=1 {
@@ -360,10 +373,10 @@ impl StyleManager {
                         if dx == 0 && dy == 0 {
                             continue;
                         }
-                        
+
                         let nx = (x as i32 + dx) as u32;
                         let ny = (y as i32 + dy) as u32;
-                        
+
                         if nx < width && ny < height {
                             let neighbor = rgba.get_pixel(nx, ny);
                             if neighbor[3] > 128 {
@@ -376,25 +389,33 @@ impl StyleManager {
                         break;
                     }
                 }
-                
+
                 if has_opaque_neighbor {
-                    outlined.put_pixel(x, y, Rgba([outline_color.r, outline_color.g, outline_color.b, 255]));
+                    outlined.put_pixel(
+                        x,
+                        y,
+                        Rgba([outline_color.r, outline_color.g, outline_color.b, 255]),
+                    );
                 }
             }
         }
-        
+
         Ok(DynamicImage::ImageRgba8(outlined))
     }
-    
+
     /// Apply dithering pattern
-    fn apply_dithering(&self, img: &DynamicImage, pattern: &DitheringPattern) -> Result<DynamicImage> {
+    fn apply_dithering(
+        &self,
+        img: &DynamicImage,
+        pattern: &DitheringPattern,
+    ) -> Result<DynamicImage> {
         match pattern {
             DitheringPattern::None => Ok(img.clone()),
             DitheringPattern::Checkerboard => {
                 let rgba = img.to_rgba8();
                 let (width, height) = rgba.dimensions();
                 let mut dithered = rgba.clone();
-                
+
                 // Apply checkerboard pattern
                 for y in 0..height {
                     for x in 0..width {
@@ -407,7 +428,7 @@ impl StyleManager {
                         }
                     }
                 }
-                
+
                 Ok(DynamicImage::ImageRgba8(dithered))
             }
             DitheringPattern::Bayer2x2 => {
@@ -431,23 +452,23 @@ impl StyleManager {
             }
         }
     }
-    
+
     /// Apply Bayer matrix dithering
     fn apply_bayer_dithering<const N: usize>(
         &self,
         img: &DynamicImage,
         matrix: &[[f32; N]; N],
-        _size: usize
+        _size: usize,
     ) -> Result<DynamicImage> {
         let rgba = img.to_rgba8();
         let (width, height) = rgba.dimensions();
         let mut dithered = rgba.clone();
-        
+
         for y in 0..height {
             for x in 0..width {
                 let pixel = dithered.get_pixel_mut(x, y);
                 let threshold = matrix[(y as usize) % N][(x as usize) % N];
-                
+
                 // Apply threshold-based adjustment
                 for i in 0..3 {
                     let value = pixel[i] as f32 / 255.0;
@@ -456,13 +477,14 @@ impl StyleManager {
                 }
             }
         }
-        
+
         Ok(DynamicImage::ImageRgba8(dithered))
     }
-    
+
     /// Find nearest color in palette
     fn find_nearest_color(&self, color: Color, palette: &[Color]) -> Color {
-        palette.iter()
+        palette
+            .iter()
             .min_by_key(|&&p| {
                 let dr = color.r as i32 - p.r as i32;
                 let dg = color.g as i32 - p.g as i32;
@@ -472,18 +494,24 @@ impl StyleManager {
             .copied()
             .unwrap_or(color)
     }
-    
+
     /// Format color list for prompt
     fn format_color_list(&self, palette: &ColorPalette) -> String {
         let mut colors = Vec::new();
-        
+
         for (i, color) in palette.primary_colors.iter().enumerate() {
-            colors.push(format!("Primary{}: #{:02X}{:02X}{:02X}", i+1, color.r, color.g, color.b));
+            colors.push(format!(
+                "Primary{}: #{:02X}{:02X}{:02X}",
+                i + 1,
+                color.r,
+                color.g,
+                color.b
+            ));
         }
-        
+
         colors.join(", ")
     }
-    
+
     fn format_outline_style(&self, style: &OutlineStyle) -> &'static str {
         match style {
             OutlineStyle::None => "no outline",
@@ -493,7 +521,7 @@ impl StyleManager {
             OutlineStyle::ColoredPerObject => "colored outline matching object",
         }
     }
-    
+
     fn format_shading(&self, technique: &ShadingTechnique) -> &'static str {
         match technique {
             ShadingTechnique::Flat => "flat colors",
@@ -503,7 +531,7 @@ impl StyleManager {
             ShadingTechnique::Pillow => "pillow shading",
         }
     }
-    
+
     fn format_light_direction(&self, direction: &LightDirection) -> &'static str {
         match direction {
             LightDirection::TopLeft => "top-left",
@@ -517,7 +545,7 @@ impl StyleManager {
             LightDirection::BottomRight => "bottom-right",
         }
     }
-    
+
     fn format_perspective(&self, perspective: &Perspective) -> &'static str {
         match perspective {
             Perspective::TopDown => "top-down view",
@@ -526,61 +554,67 @@ impl StyleManager {
             Perspective::SideScroller => "side-scrolling view",
         }
     }
-    
+
     /// Get default color palettes
     fn default_palettes() -> HashMap<String, ColorPalette> {
         let mut palettes = HashMap::new();
-        
+
         // SNES-style palette
-        palettes.insert("snes_fantasy".to_string(), ColorPalette {
-            name: "SNES Fantasy".to_string(),
-            primary_colors: vec![
-                Color::new(34, 32, 52),    // Dark purple
-                Color::new(69, 40, 60),    // Purple
-                Color::new(102, 57, 49),   // Brown
-                Color::new(143, 86, 59),   // Light brown
-            ],
-            secondary_colors: vec![
-                Color::new(223, 113, 38),  // Orange
-                Color::new(217, 160, 102), // Light orange
-                Color::new(238, 195, 154), // Peach
-                Color::new(251, 242, 54),  // Yellow
-            ],
-            accent_colors: vec![
-                Color::new(153, 229, 80),  // Green
-                Color::new(106, 190, 48),  // Dark green
-                Color::new(55, 148, 110),  // Teal
-                Color::new(75, 105, 47),   // Forest
-            ],
-            transparency_color: Color::transparent(),
-            max_colors: 16,
-        });
-        
+        palettes.insert(
+            "snes_fantasy".to_string(),
+            ColorPalette {
+                name: "SNES Fantasy".to_string(),
+                primary_colors: vec![
+                    Color::new(34, 32, 52),  // Dark purple
+                    Color::new(69, 40, 60),  // Purple
+                    Color::new(102, 57, 49), // Brown
+                    Color::new(143, 86, 59), // Light brown
+                ],
+                secondary_colors: vec![
+                    Color::new(223, 113, 38),  // Orange
+                    Color::new(217, 160, 102), // Light orange
+                    Color::new(238, 195, 154), // Peach
+                    Color::new(251, 242, 54),  // Yellow
+                ],
+                accent_colors: vec![
+                    Color::new(153, 229, 80), // Green
+                    Color::new(106, 190, 48), // Dark green
+                    Color::new(55, 148, 110), // Teal
+                    Color::new(75, 105, 47),  // Forest
+                ],
+                transparency_color: Color::transparent(),
+                max_colors: 16,
+            },
+        );
+
         // Genesis/Mega Drive palette
-        palettes.insert("genesis_action".to_string(), ColorPalette {
-            name: "Genesis Action".to_string(),
-            primary_colors: vec![
-                Color::new(0, 0, 0),       // Black
-                Color::new(29, 43, 83),    // Dark blue
-                Color::new(126, 37, 83),   // Dark red
-                Color::new(0, 135, 81),    // Dark green
-            ],
-            secondary_colors: vec![
-                Color::new(171, 82, 54),   // Brown
-                Color::new(95, 87, 79),    // Gray
-                Color::new(194, 195, 199), // Light gray
-                Color::new(255, 241, 232), // White
-            ],
-            accent_colors: vec![
-                Color::new(255, 0, 77),    // Red
-                Color::new(255, 163, 0),   // Orange
-                Color::new(255, 236, 39),  // Yellow
-                Color::new(0, 228, 54),    // Green
-            ],
-            transparency_color: Color::transparent(),
-            max_colors: 16,
-        });
-        
+        palettes.insert(
+            "genesis_action".to_string(),
+            ColorPalette {
+                name: "Genesis Action".to_string(),
+                primary_colors: vec![
+                    Color::new(0, 0, 0),     // Black
+                    Color::new(29, 43, 83),  // Dark blue
+                    Color::new(126, 37, 83), // Dark red
+                    Color::new(0, 135, 81),  // Dark green
+                ],
+                secondary_colors: vec![
+                    Color::new(171, 82, 54),   // Brown
+                    Color::new(95, 87, 79),    // Gray
+                    Color::new(194, 195, 199), // Light gray
+                    Color::new(255, 241, 232), // White
+                ],
+                accent_colors: vec![
+                    Color::new(255, 0, 77),   // Red
+                    Color::new(255, 163, 0),  // Orange
+                    Color::new(255, 236, 39), // Yellow
+                    Color::new(0, 228, 54),   // Green
+                ],
+                transparency_color: Color::transparent(),
+                max_colors: 16,
+            },
+        );
+
         palettes
     }
 }
@@ -590,7 +624,7 @@ impl StyleConfig {
     pub fn default_16bit_rpg() -> Self {
         Self::snes_rpg_style()
     }
-    
+
     /// SNES RPG style configuration
     pub fn snes_rpg_style() -> Self {
         Self {
@@ -644,7 +678,7 @@ impl StyleConfig {
             },
         }
     }
-    
+
     /// Genesis action game style
     pub fn genesis_action_style() -> Self {
         Self {
@@ -698,7 +732,7 @@ impl StyleConfig {
             },
         }
     }
-    
+
     /// Game Boy style
     pub fn gameboy_style() -> Self {
         Self {
@@ -742,7 +776,7 @@ impl StyleConfig {
             },
         }
     }
-    
+
     /// NES platformer style
     pub fn nes_platformer_style() -> Self {
         Self {
@@ -750,10 +784,10 @@ impl StyleConfig {
             palette: ColorPalette {
                 name: "NES Classic".to_string(),
                 primary_colors: vec![
-                    Color::new(0, 0, 0),       // Black
-                    Color::new(31, 0, 116),    // Dark blue
-                    Color::new(127, 11, 0),    // Dark red
-                    Color::new(0, 74, 0),      // Dark green
+                    Color::new(0, 0, 0),    // Black
+                    Color::new(31, 0, 116), // Dark blue
+                    Color::new(127, 11, 0), // Dark red
+                    Color::new(0, 74, 0),   // Dark green
                 ],
                 secondary_colors: vec![
                     Color::new(187, 187, 187), // Light gray
@@ -762,10 +796,10 @@ impl StyleConfig {
                     Color::new(255, 119, 119), // Light red
                 ],
                 accent_colors: vec![
-                    Color::new(255, 238, 0),   // Yellow
-                    Color::new(255, 102, 0),   // Orange
-                    Color::new(127, 255, 0),   // Light green
-                    Color::new(255, 0, 255),   // Magenta
+                    Color::new(255, 238, 0), // Yellow
+                    Color::new(255, 102, 0), // Orange
+                    Color::new(127, 255, 0), // Light green
+                    Color::new(255, 0, 255), // Magenta
                 ],
                 transparency_color: Color::transparent(),
                 max_colors: 13,
@@ -796,7 +830,7 @@ impl StyleConfig {
             },
         }
     }
-    
+
     fn default_animation_frames() -> HashMap<String, u32> {
         let mut frames = HashMap::new();
         frames.insert("idle".to_string(), 2);
@@ -814,46 +848,47 @@ impl StyleConfig {
 pub mod sprite_sheets {
     use super::*;
     use image::{GenericImage, GenericImageView, RgbaImage};
-    
+
     /// Pack multiple sprites into a sprite sheet
     pub fn pack_sprites(sprites: Vec<DynamicImage>, padding: u32) -> Result<DynamicImage> {
         if sprites.is_empty() {
             return Err(anyhow::anyhow!("No sprites to pack"));
         }
-        
+
         // Calculate optimal sheet dimensions
         let sprite_count = sprites.len();
         let cols = (sprite_count as f32).sqrt().ceil() as u32;
         let rows = ((sprite_count as f32) / cols as f32).ceil() as u32;
-        
+
         // Get max sprite dimensions
-        let (max_width, max_height) = sprites.iter()
+        let (max_width, max_height) = sprites
+            .iter()
             .map(|s| s.dimensions())
             .fold((0, 0), |(mw, mh), (w, h)| (mw.max(w), mh.max(h)));
-        
+
         // Create sprite sheet
         let sheet_width = cols * (max_width + padding) + padding;
         let sheet_height = rows * (max_height + padding) + padding;
         let mut sheet = RgbaImage::new(sheet_width, sheet_height);
-        
+
         // Fill with transparency
         for pixel in sheet.pixels_mut() {
             *pixel = Rgba([255, 0, 255, 0]); // Magenta transparency
         }
-        
+
         // Pack sprites
         for (idx, sprite) in sprites.iter().enumerate() {
             let col = idx as u32 % cols;
             let row = idx as u32 / cols;
             let x = padding + col * (max_width + padding);
             let y = padding + row * (max_height + padding);
-            
+
             sheet.copy_from(&sprite.to_rgba8(), x, y)?;
         }
-        
+
         Ok(DynamicImage::ImageRgba8(sheet))
     }
-    
+
     /// Extract sprites from a sprite sheet
     pub fn extract_sprites(
         sheet: &DynamicImage,
@@ -864,24 +899,24 @@ pub mod sprite_sheets {
         let (sheet_width, sheet_height) = sheet.dimensions();
         let cols = (sheet_width - padding) / (sprite_width + padding);
         let rows = (sheet_height - padding) / (sprite_height + padding);
-        
+
         let mut sprites = Vec::new();
-        
+
         for row in 0..rows {
             for col in 0..cols {
                 let x = padding + col * (sprite_width + padding);
                 let y = padding + row * (sprite_height + padding);
-                
+
                 if x + sprite_width <= sheet_width && y + sprite_height <= sheet_height {
                     let sprite = sheet.crop_imm(x, y, sprite_width, sprite_height);
                     sprites.push(sprite);
                 }
             }
         }
-        
+
         Ok(sprites)
     }
-    
+
     /// Generate sprite sheet metadata
     pub fn generate_metadata(
         sprites: &[DynamicImage],
@@ -895,23 +930,26 @@ pub mod sprite_sheets {
         } else {
             (0, 0)
         };
-        
+
         let cols = (sheet_width - padding) / (sprite_width + padding);
-        
+
         for (idx, name) in names.into_iter().enumerate() {
             let col = idx as u32 % cols;
             let row = idx as u32 / cols;
             let x = padding + col * (sprite_width + padding);
             let y = padding + row * (sprite_height + padding);
-            
-            frames.insert(name, SpriteFrame {
-                x,
-                y,
-                width: sprite_width,
-                height: sprite_height,
-            });
+
+            frames.insert(
+                name,
+                SpriteFrame {
+                    x,
+                    y,
+                    width: sprite_width,
+                    height: sprite_height,
+                },
+            );
         }
-        
+
         SpriteSheetMetadata {
             frames,
             padding,
