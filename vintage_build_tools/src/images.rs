@@ -81,9 +81,11 @@ impl ImageDownloader {
                             }
                         }
                         Ok(false) => {
-                            // Shouldn't happen as we pre-filter existing files
+                            // File already exists (shouldn't happen as we pre-filter)
+                            // Count as already downloaded, not failed
                         }
                         Err(e) => {
+                            // This includes HTTP errors (4xx, 5xx) and IO errors
                             eprintln!("  Warning: Failed to download image for game {}: {}", game_id, e);
                             failed.fetch_add(1, Ordering::Relaxed);
                         }
@@ -104,6 +106,7 @@ impl ImageDownloader {
     }
     
     /// Download a single image (static method for parallel processing)
+    /// Returns Ok(true) if downloaded successfully, Err if HTTP or IO error
     fn download_single_image(client: &reqwest::blocking::Client, url: &str, image_path: &Path) -> Result<bool> {
         // Download the image
         let response = client.get(url).send()?;
@@ -113,7 +116,8 @@ impl ImageDownloader {
             fs::write(image_path, &bytes)?;
             Ok(true)
         } else {
-            Ok(false)
+            // Return an error for HTTP failures so they get properly counted
+            anyhow::bail!("HTTP {} for URL: {}", response.status(), url)
         }
     }
     

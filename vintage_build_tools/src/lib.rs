@@ -85,8 +85,10 @@ fn find_repository_root() -> Result<PathBuf> {
         match current.parent() {
             Some(parent) => current = parent.to_path_buf(),
             None => {
-                // Fallback: assume we're 2 levels deep in crates/
-                return Ok(env::current_dir()?.parent().unwrap().parent().unwrap().to_path_buf());
+                // Reached filesystem root without finding repository markers
+                anyhow::bail!(
+                    "Could not find repository root. Please run from within the repository directory."
+                );
             }
         }
     }
