@@ -57,22 +57,22 @@ fi
 
 # Check 5: Cargo check
 echo -n "Running cargo check... "
-if cargo check --all-features 2>&1 | tee /tmp/cargo-check.log | grep -q "error"; then
-    echo -e "${RED}✗${NC} Build errors found"
-    echo -e "${YELLOW}Review errors:${NC}"
-    grep "error" /tmp/cargo-check.log
-    exit 1
-else
+if cargo check --all-targets --all-features > /tmp/cargo-check.log 2>&1; then
     echo -e "${GREEN}✓${NC} No build errors"
+else
+    echo -e "${RED}✗${NC} Build failed"
+    echo -e "${YELLOW}Review errors:${NC}"
+    tail -20 /tmp/cargo-check.log
+    exit 1
 fi
 
 # Check 6: Clippy
 echo -n "Running clippy... "
-if cargo clippy --all-features -- -D warnings > /dev/null 2>&1; then
+if cargo clippy --all-targets --all-features -- -D warnings > /dev/null 2>&1; then
     echo -e "${GREEN}✓${NC} No clippy warnings"
 else
     echo -e "${RED}✗${NC} Clippy warnings/errors found"
-    echo -e "${YELLOW}Action required:${NC} Run 'cargo clippy --all-features' to see details"
+    echo -e "${YELLOW}Action required:${NC} Run 'cargo clippy --all-targets --all-features' to see details"
     exit 1
 fi
 
