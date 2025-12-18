@@ -1,0 +1,77 @@
+{#- Blend-based Game Design Template -#}
+{#- This template creates a game concept from blended vintage games -#}
+Create a vintage-style game concept based on this carefully crafted blend of classic games.
+
+## BLEND DETAILS
+
+**Name:** {{ blend.name }}
+**Description:** {{ blend.description }}
+
+## GENRE COMPOSITION
+{% for genre, weight in blend.genres | dictsort(by="value", reverse=true) %}
+- {{ genre }}: {{ (weight * 100) | round }}%
+{%- endfor %}
+
+## CORE MECHANICS
+The game should incorporate these mechanics:
+{% for mechanic in blend.mechanics %}
+- {{ mechanic | replace("_", " ") | title }}
+{%- endfor %}
+
+## VISUAL STYLE
+Art direction should blend:
+{% for style in blend.art_styles %}
+- {{ style }}
+{%- endfor %}
+
+## GAME CHARACTERISTICS
+- **Complexity Level:** {{ (blend.complexity_score * 100) | round }}% ({% if blend.complexity_score < 0.3 %}Simple{% elif blend.complexity_score < 0.7 %}Moderate{% else %}Complex{% endif %})
+- **Gameplay Balance:** {{ (blend.action_strategy_balance * 100) | round }}% action, {{ ((1.0 - blend.action_strategy_balance) * 100) | round }}% strategy
+
+{% if blend.synergies %}
+## KEY SYNERGIES TO LEVERAGE
+These combinations work particularly well together:
+{% for synergy in blend.synergies %}
+- **{{ synergy.game1 }} × {{ synergy.game2 }}**: {{ synergy.description }} (Strength: {{ synergy.strength }})
+{%- endfor %}
+{% endif %}
+
+{% if blend.conflicts %}
+## DESIGN CHALLENGES TO RESOLVE
+These elements may conflict and need careful integration:
+{% for conflict in blend.conflicts %}
+- **{{ conflict.game1 }} vs {{ conflict.game2 }}** ({{ conflict.conflict_type }}): {{ conflict.resolution }}
+{%- endfor %}
+{% endif %}
+
+## RECOMMENDED FEATURES
+Based on the blend analysis, consider including:
+{% for feature in blend.recommended_features %}
+- {{ feature }}
+{%- endfor %}
+
+## SOURCE GAMES
+This blend draws inspiration from:
+{% for game in source_games %}
+- **{{ game.name }}** ({{ game.year }}) - {{ game.genre }}{% if game.developer %} by {{ game.developer }}{% endif %}
+{%- endfor %}
+
+---
+
+## YOUR TASK
+
+Create a cohesive game concept that:
+1. Captures the essence of this unique blend
+2. Resolves any conflicts between different game elements
+3. Leverages the identified synergies
+4. Appeals to fans of the source games while offering something fresh
+5. Maintains appropriate complexity for the target audience
+
+Describe:
+- Core gameplay loop
+- Setting and world
+- Main progression systems
+- Unique selling points
+- How it honors its vintage inspirations while modernizing appropriately
+
+Make it exciting, nostalgic, and implementable!

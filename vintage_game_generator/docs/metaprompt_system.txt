@@ -1,0 +1,262 @@
+# Bevy 16-bit Game Development Metaprompt System
+
+## Phase 1: Game Concept Discovery
+
+### Initial Questions Prompt
+```
+I'm going to help you create a nostalgic 16-bit style game using Bevy 0.16.1 with a 3/4 isometric view. Let's start by defining your game concept.
+
+Please answer the following questions:
+
+1. **Game Name**: What would you like to call your game?
+
+2. **Core Theme**: What's the main theme? (e.g., fantasy RPG, sci-fi adventure, farming sim, dungeon crawler)
+
+3. **Setting & Story**: Briefly describe the world and any narrative elements.
+
+4. **Core Gameplay Loop**: What does the player primarily do? (e.g., explore and fight, build and manage, solve puzzles)
+
+5. **Key Features** (choose up to 5):
+   - [ ] Combat system
+   - [ ] Inventory/items
+   - [ ] Character progression/stats
+   - [ ] NPCs and dialogue
+   - [ ] Crafting system
+   - [ ] Day/night cycle
+   - [ ] Weather effects
+   - [ ] Multiple biomes/areas
+   - [ ] Boss battles
+   - [ ] Multiplayer support
+   - [ ] Save/load system
+   - [ ] Other: ___________
+
+6. **Visual Style Reference**: Which 16-bit era games inspire your aesthetic? (e.g., Secret of Mana, Chrono Trigger, Final Fantasy VI, Legend of Zelda: A Link to the Past)
+
+7. **Map Size**: How large should the world be?
+   - [ ] Small (10-20 screens)
+   - [ ] Medium (50-100 screens)
+   - [ ] Large (100+ screens)
+
+8. **Target Mood**: What feeling should the game evoke? (nostalgic, mysterious, cheerful, tense, etc.)
+```
+
+## Phase 2: Technical Architecture Prompts
+
+### 2.1 Core Systems Architecture
+```
+Based on [GAME_NAME] with [FEATURES], generate the core Bevy 0.16.1 ECS architecture:
+
+Create a main.rs that includes:
+- App setup with necessary plugins
+- Game state management (Menu, Playing, Paused)
+- Resource definitions for game settings
+- Core systems scheduling
+- Window configuration for pixel-perfect 16-bit aesthetics (320x240 base resolution with integer scaling)
+```
+
+### 2.2 Tilemap System
+```
+Create a tilemap system for [GAME_NAME] using Bevy 0.16.1 that includes:
+
+1. Tile component definitions (position, tile type, walkability)
+2. Tilemap resource holding the grid data
+3. Chunk-based loading for large maps
+4. 3/4 isometric view transformation functions
+5. Tile rendering system with proper draw order
+6. Collision detection for tile-based movement
+
+The tilemap should support:
+- Multiple layers (ground, decoration, collision)
+- Tile size of 16x16 or 32x32 pixels
+- Efficient culling for off-screen tiles
+```
+
+### 2.3 Procedural Generation
+```
+Design a procedural tilemap generation system for [GAME_NAME] that creates [BIOME_TYPES]:
+
+Include:
+- Noise-based terrain generation
+- Biome transitions
+- Placement rules for decorative elements
+- Path/river generation
+- Structure placement (towns, dungeons, etc.)
+- Ensure nostalgic 16-bit constraints (limited tile variety, pattern-based design)
+```
+
+## Phase 3: Asset Generation Prompts
+
+### 3.1 Sprite Sheet Specifications
+```
+Generate pixel art sprite sheet specifications for [GAME_NAME]:
+
+Character Sprites:
+- Size: 16x24 or 24x32 pixels
+- Animations: idle (2 frames), walk (4 frames per direction), action (3 frames)
+- 4 or 8 directional facing
+- Limited to 16-color palette per sprite
+
+Tile Sprites:
+- Base size: [16x16 or 32x32]
+- Terrain tiles: grass, dirt, stone, water (with edge variants)
+- Decoration tiles: trees, rocks, flowers, buildings
+- All tiles must seamlessly connect
+
+UI Elements:
+- Dialog boxes with ornate 16-bit borders
+- Menu buttons and frames
+- Icon set (16x16) for items/abilities
+```
+
+### 3.2 Color Palette
+```
+Create a 16-bit era color palette for [GAME_NAME] with [MOOD]:
+
+- Maximum 256 colors for the entire game
+- 16-32 colors per sprite/tile
+- Include transparency color
+- Define separate palettes for:
+  - Environment (day/sunset/night variants)
+  - Characters and enemies
+  - UI elements
+  - Special effects
+
+Reference palettes from [REFERENCE_GAMES]
+```
+
+### 3.3 Audio Specifications
+```
+Define audio requirements mimicking 16-bit era constraints:
+
+Music:
+- Chiptune/MIDI style compositions
+- 4-8 channel limitation
+- Tracks needed: title, overworld, battle, victory, town, dungeon
+- Loop points for seamless playback
+
+Sound Effects:
+- 8-bit style effects
+- Categories: UI, combat, movement, ambient
+- Duration: 0.1-1.0 seconds typical
+- Format: Low bitrate for authentic feel
+```
+
+## Phase 4: Component Implementation Prompts
+
+### 4.1 Player Controller
+```
+Implement a player controller for [GAME_NAME] in Bevy 0.16.1:
+
+- Grid-based or smooth movement (based on game style)
+- 3/4 view perspective handling
+- Input handling for keyboard/gamepad
+- Animation state machine
+- Collision with tilemap
+- Camera following with smooth scrolling
+- Pixel-perfect movement (no sub-pixel positions)
+```
+
+### 4.2 Game Systems
+```
+For each selected feature in [GAME_NAME], implement:
+
+[IF Combat System]:
+- Turn-based or real-time combat
+- Damage calculation
+- Enemy AI patterns
+- Combat animations and effects
+
+[IF Inventory]:
+- Grid-based inventory UI
+- Item components and systems
+- Drag-and-drop or menu-based interface
+- Equipment slots
+
+[IF Dialogue]:
+- Text box rendering with typewriter effect
+- Character portraits
+- Branching dialogue trees
+- Quest/flag system
+
+[Continue for each selected feature...]
+```
+
+### 4.3 Visual Effects
+```
+Create 16-bit appropriate visual effects:
+
+- Particle systems with sprite-based particles
+- Screen transitions (fade, iris, mosaic)
+- Palette swapping for damage/status effects
+- Scanline or CRT filter options
+- Weather effects using tilemap overlays
+- Limited to period-appropriate techniques
+```
+
+## Phase 5: Integration and Polish
+
+### 5.1 Save System
+```
+Implement a save/load system appropriate for a 16-bit style game:
+
+- Multiple save slots with preview
+- Save data includes: position, inventory, flags, playtime
+- Visual save menu matching game aesthetic
+- Optional password system for nostalgic feel
+```
+
+### 5.2 Performance Optimization
+```
+Optimize [GAME_NAME] for smooth 16-bit style performance:
+
+- Sprite batching for tilemap rendering
+- Efficient collision detection using spatial hashing
+- Asset loading strategies
+- Target 60 FPS on modest hardware
+- Memory usage constraints matching retro limitations
+```
+
+### 5.3 Final Integration
+```
+Create the final game package for [GAME_NAME]:
+
+1. Integrate all systems
+2. Add title screen and menus
+3. Implement game flow (start, play, win/lose)
+4. Package assets efficiently
+5. Create configuration for different display modes
+6. Add accessibility options while maintaining aesthetic
+```
+
+## Prompt Chaining Instructions
+
+To use this metaprompt system:
+
+1. Start with Phase 1 to gather game requirements
+2. Use responses to fill in [PLACEHOLDERS] in subsequent prompts
+3. Execute prompts in order, using outputs as context for the next
+4. For each code generation prompt, specify:
+   - Target file structure
+   - Bevy 0.16.1 specific patterns
+   - Integration points with existing code
+5. Test and iterate on each component before moving to the next
+
+## Additional Specialized Prompts
+
+### Asset Generation AI Prompts
+```
+When generating pixel art assets, use these constraints:
+- "Create 16x24 pixel character sprite, 16-color palette, 3/4 view perspective"
+- "Design seamless 32x32 tileset for [BIOME], limited palette, includes edges and corners"
+- "Generate 16-bit style UI elements: bordered dialog box, ornate menu frame, pixel font"
+```
+
+### Code Review Prompt
+```
+Review the generated [COMPONENT] code for:
+- Bevy 0.16.1 best practices
+- ECS pattern compliance
+- Performance considerations
+- Integration compatibility
+- 16-bit aesthetic preservation
+```

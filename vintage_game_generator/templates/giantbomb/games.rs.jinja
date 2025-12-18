@@ -1,0 +1,134 @@
+//! Game data structures and search functionality
+
+use serde::{Deserialize, Serialize};
+
+/// A game from the vintage timeline
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TimelineGame {
+    pub id: u32,
+    pub name: &'static str,
+    pub year: i32,
+    pub genre: &'static str,
+    pub developer: Option<&'static str>,
+    pub deck: Option<&'static str>,
+    pub platforms: &'static [&'static str],
+}
+
+/// All games in the timeline
+pub const TIMELINE_GAMES: &[TimelineGame] = &[
+    {%- for game in games %}
+    TimelineGame {
+        id: {{ game.id }},
+        name: r#"{{ game.name }}"#,
+        year: {{ game.year }},
+        genre: r#"{{ game.genre }}"#,
+        developer: {% if game.developer %}Some(r#"{{ game.developer }}"#){% else %}None{% endif %},
+        deck: {% if game.deck %}Some(r#"{{ game.deck }}"#){% else %}None{% endif %},
+        platforms: &[
+            {%- for platform in game.platforms %}
+            r#"{{ platform }}"#,
+            {%- endfor %}
+        ],
+    },
+    {%- endfor %}
+];
+
+/// Get all games from a specific year
+pub fn games_by_year(year: i32) -> Vec<&'static TimelineGame> {
+    TIMELINE_GAMES
+        .iter()
+        .filter(|game| game.year == year)
+        .collect()
+}
+
+/// Search games by name (case-insensitive)
+pub fn search_games(query: &str) -> Vec<&'static TimelineGame> {
+    let query_lower = query.to_lowercase();
+    
+    TIMELINE_GAMES
+        .iter()
+        .filter(|game| {
+            game.name.to_lowercase().contains(&query_lower) ||
+            game.developer.map(|d| d.to_lowercase().contains(&query_lower)).unwrap_or(false)
+        })
+        .collect()
+}
+
+/// Get unique genres
+pub fn all_genres() -> Vec<String> {
+    use std::collections::HashSet;
+    
+    let mut genres = HashSet::new();
+    for game in TIMELINE_GAMES {
+        genres.insert(game.genre.to_string());
+    }
+    
+    let mut sorted: Vec<_> = genres.into_iter().collect();
+    sorted.sort();
+    sorted
+}
+
+/// Get all platforms
+pub fn all_platforms() -> Vec<String> {
+    use std::collections::HashSet;
+    
+    let mut platforms = HashSet::new();
+    for game in TIMELINE_GAMES {
+        for platform in game.platforms {
+            platforms.insert(platform.to_string());
+        }
+    }
+    
+    let mut sorted: Vec<_> = platforms.into_iter().collect();
+    sorted.sort();
+    sorted
+}
+
+/// Get game by ID
+pub fn get_game_by_id(id: u32) -> Option<&'static TimelineGame> {
+    TIMELINE_GAMES.iter().find(|game| game.id == id)
+}
+
+/// Get games by genre
+pub fn games_by_genre(genre: &str) -> Vec<&'static TimelineGame> {
+    TIMELINE_GAMES
+        .iter()
+        .filter(|game| game.genre == genre)
+        .collect()
+}
+
+/// Get games by platform
+pub fn games_by_platform(platform: &str) -> Vec<&'static TimelineGame> {
+    TIMELINE_GAMES
+        .iter()
+        .filter(|game| game.platforms.contains(&platform))
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_games_loaded() {
+        assert!(!TIMELINE_GAMES.is_empty());
+    }
+    
+    #[test]
+    fn test_search() {
+        // Search should be case-insensitive
+        let results = search_games("mario");
+        for game in results {
+            assert!(game.name.to_lowercase().contains("mario") || 
+                    game.developer.map(|d| d.to_lowercase().contains("mario")).unwrap_or(false));
+        }
+    }
+    
+    #[test]
+    fn test_year_filter() {
+        let games_1985 = games_by_year(1985);
+        for game in games_1985 {
+            assert_eq!(game.year, 1985);
+        }
+    }
+}

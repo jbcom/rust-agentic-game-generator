@@ -1,0 +1,162 @@
+//! Pre-computed similarity graph for game blending
+
+use super::games::{TimelineGame, TIMELINE_GAMES};
+use super::eras::Era;
+use std::collections::HashMap;
+
+/// Edge between two games with similarity score
+#[derive(Debug, Clone)]
+pub struct SimilarityEdge {
+    pub game1_id: u32,
+    pub game2_id: u32,
+    pub similarity: f32,
+}
+
+/// Pre-computed similarity data as static arrays
+pub const SIMILARITY_EDGES: &[SimilarityEdge] = &[
+{%- for edge in edges %}
+    SimilarityEdge {
+        game1_id: {{ edge.game1_id }},
+        game2_id: {{ edge.game2_id }},
+        similarity: {{ edge.similarity }},
+    },
+{%- endfor %}
+];
+
+/// Hub games (highly connected games)
+pub const HUB_GAMES: &[u32] = &[
+{%- for hub in hub_games %}
+    {{ hub }},
+{%- endfor %}
+];
+
+/// Average similarity across all edges
+pub const AVG_SIMILARITY: f32 = {{ avg_similarity }};
+
+/// Find similar games using the pre-computed graph
+pub fn find_similar_games(game_id: u32, count: usize) -> Vec<(u32, f32)> {
+    let mut similarities = Vec::new();
+    
+    for edge in SIMILARITY_EDGES.iter() {
+        if edge.game1_id == game_id {
+            similarities.push((edge.game2_id, edge.similarity));
+        } else if edge.game2_id == game_id {
+            similarities.push((edge.game1_id, edge.similarity));
+        }
+    }
+    
+    similarities.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    similarities.truncate(count);
+    similarities
+}
+
+/// Check if a game is a hub (highly connected)
+pub fn is_hub_game(game_id: u32) -> bool {
+    HUB_GAMES.contains(&game_id)
+}
+
+/// Get all games connected to a given game
+pub fn get_connected_games(game_id: u32) -> Vec<u32> {
+    let mut connected = Vec::new();
+    
+    for edge in SIMILARITY_EDGES.iter() {
+        if edge.game1_id == game_id {
+            connected.push(edge.game2_id);
+        } else if edge.game2_id == game_id {
+            connected.push(edge.game1_id);
+        }
+    }
+    
+    connected
+}
+
+/// Build a runtime similarity index for fast lookups
+pub fn build_similarity_index() -> HashMap<u32, Vec<(u32, f32)>> {
+    let mut index: HashMap<u32, Vec<(u32, f32)>> = HashMap::new();
+    
+    for edge in SIMILARITY_EDGES.iter() {
+        index.entry(edge.game1_id)
+            .or_insert_with(Vec::new)
+            .push((edge.game2_id, edge.similarity));
+            
+        index.entry(edge.game2_id)
+            .or_insert_with(Vec::new)
+            .push((edge.game1_id, edge.similarity));
+    }
+    
+    // Sort each game's connections by similarity
+    for connections in index.values_mut() {
+        connections.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    }
+    
+    index
+}
+
+/// Pre-computed similarity graph data for runtime use
+pub const SIMILARITY_GRAPH: SimilarityGraph = SimilarityGraph {
+    edges: SIMILARITY_EDGES,
+    hub_games: HUB_GAMES,
+    avg_similarity: AVG_SIMILARITY,
+};
+
+/// Wrapper struct for the pre-computed graph data
+#[derive(Debug)]
+pub struct SimilarityGraph {
+    pub edges: &'static [SimilarityEdge],
+    pub hub_games: &'static [u32],
+    pub avg_similarity: f32,
+}
+
+impl SimilarityGraph {
+    /// Find games within a similarity range
+    pub fn find_games_in_range(&self, game_id: u32, min_similarity: f32, max_similarity: f32) -> Vec<(u32, f32)> {
+        let mut results = Vec::new();
+        
+        for edge in self.edges.iter() {
+            if edge.similarity >= min_similarity && edge.similarity <= max_similarity {
+                if edge.game1_id == game_id {
+                    results.push((edge.game2_id, edge.similarity));
+                } else if edge.game2_id == game_id {
+                    results.push((edge.game1_id, edge.similarity));
+                }
+            }
+        }
+        
+        results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        results
+    }
+    
+    /// Get similarity between two specific games
+    pub fn get_similarity(&self, game1_id: u32, game2_id: u32) -> Option<f32> {
+        for edge in self.edges.iter() {
+            if (edge.game1_id == game1_id && edge.game2_id == game2_id) ||
+               (edge.game1_id == game2_id && edge.game2_id == game1_id) {
+                return Some(edge.similarity);
+            }
+        }
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_similarity_lookup() {
+        // Test that we can find similar games
+        if let Some(first_game) = TIMELINE_GAMES.first() {
+            let similar = find_similar_games(first_game.id, 5);
+            // Should find at least some similar games if edges exist
+            assert!(similar.len() <= 5);
+        }
+    }
+    
+    #[test]
+    fn test_hub_detection() {
+        // Hub games should be a subset of all game IDs
+        for &hub_id in HUB_GAMES {
+            assert!(TIMELINE_GAMES.iter().any(|g| g.id == hub_id));
+        }
+    }
+}

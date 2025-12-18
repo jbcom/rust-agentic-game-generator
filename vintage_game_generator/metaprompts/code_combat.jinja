@@ -1,0 +1,239 @@
+{# Combat System Code Generation #}
+Generate a complete combat system for {{ config.name }} using Bevy 0.16.1.
+
+Combat style: {{ config.combat_system.style }}
+Features: {{ config.combat_system.features | join(", ") }}
+
+Style guide constraints:
+{{ style_guide }}
+
+Generate a combat.rs file that implements:
+
+```rust
+use bevy::prelude::*;
+use crate::{GameState, Party, Enemy, BattleState};
+
+{% if config.combat_system.style == "turn-based" %}
+// Turn-based combat system with classic JRPG feel
+
+#[derive(Component)]
+pub struct CombatStats {
+    pub hp: i32,
+    pub max_hp: i32,
+    pub mp: i32,
+    pub max_mp: i32,
+    pub attack: i32,
+    pub defense: i32,
+    pub magic: i32,
+    pub speed: i32,
+}
+
+#[derive(Component)]
+pub struct TurnOrder {
+    pub priority: f32,
+    pub ready: bool,
+}
+
+#[derive(Event)]
+pub enum CombatAction {
+    Attack { attacker: Entity, target: Entity },
+    Magic { caster: Entity, spell: SpellId, targets: Vec<Entity> },
+    Item { user: Entity, item: ItemId, target: Entity },
+    Defend { defender: Entity },
+    Flee { party_member: Entity },
+}
+
+pub struct CombatPlugin;
+
+impl Plugin for CombatPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_state::<BattleState>()
+            .add_event::<CombatAction>()
+            .add_systems(OnEnter(GameState::Combat), setup_battle_screen)
+            .add_systems(Update, (
+                calculate_turn_order,
+                process_player_input,
+                execute_combat_actions,
+                check_battle_end,
+                update_battle_ui,
+            ).chain().run_if(in_state(GameState::Combat)));
+    }
+}
+
+fn setup_battle_screen(
+    mut commands: Commands,
+    party_query: Query<&Party>,
+    enemy_spawn: Res<EnemySpawnData>,
+) {
+    // Position party members in classic formation
+    // Spawn enemies based on encounter
+    // Create battle UI with menus
+    // Initialize turn order
+}
+
+fn calculate_turn_order(
+    mut turn_query: Query<(&mut TurnOrder, &CombatStats)>,
+) {
+    // Calculate turn priority based on speed stat
+    // Handle status effects that modify turn order
+}
+
+fn process_player_input(
+    keyboard: Res<Input<KeyCode>>,
+    current_turn: Res<CurrentTurn>,
+    mut menu_state: ResMut<BattleMenuState>,
+    mut combat_events: EventWriter<CombatAction>,
+) {
+    // Handle menu navigation
+    // Select actions (Attack, Magic, Item, Defend, Run)
+    // Target selection with visual indicators
+}
+
+fn execute_combat_actions(
+    mut combat_events: EventReader<CombatAction>,
+    mut stats_query: Query<&mut CombatStats>,
+    mut battle_log: ResMut<BattleLog>,
+) {
+    for action in combat_events.read() {
+        match action {
+            CombatAction::Attack { attacker, target } => {
+                // Calculate damage with variance
+                // Apply elemental weaknesses
+                // Trigger combat animations
+                // Update battle log
+            }
+            CombatAction::Magic { caster, spell, targets } => {
+                // Consume MP
+                // Apply spell effects
+                // Handle multi-target spells
+                // Trigger spell animations
+            }
+            // ... other actions
+        }
+    }
+}
+
+{% elif config.combat_system.style == "action" %}
+// Real-time action combat like Secret of Mana
+
+#[derive(Component)]
+pub struct CombatHitbox {
+    pub size: Vec2,
+    pub offset: Vec2,
+    pub damage: i32,
+    pub knockback: f32,
+    pub active_frames: u32,
+}
+
+#[derive(Component)]
+pub struct AttackCooldown {
+    pub timer: Timer,
+    pub combo_window: Timer,
+    pub combo_count: u32,
+}
+
+// ... action combat implementation
+{% endif %}
+
+// Damage calculation following classic JRPG formulas
+fn calculate_damage(
+    attacker_stats: &CombatStats,
+    defender_stats: &CombatStats,
+    attack_type: AttackType,
+) -> i32 {
+    let base_damage = match attack_type {
+        AttackType::Physical => {
+            // Classic physical damage formula
+            let atk = attacker_stats.attack as f32;
+            let def = defender_stats.defense as f32;
+            ((atk * 2.0) - def).max(1.0) as i32
+        }
+        AttackType::Magical => {
+            // Magic damage ignores defense
+            let mag = attacker_stats.magic as f32;
+            let mdef = defender_stats.magic as f32 * 0.5;
+            ((mag * 2.5) - mdef).max(1.0) as i32
+        }
+    };
+    
+    // Add variance (±10%)
+    let variance = rand::random::<f32>() * 0.2 - 0.1;
+    let final_damage = (base_damage as f32 * (1.0 + variance)) as i32;
+    
+    final_damage.max(1) // Always deal at least 1 damage
+}
+
+// Status effects system
+#[derive(Component)]
+pub struct StatusEffect {
+    pub effect_type: StatusType,
+    pub duration: Timer,
+    pub power: i32,
+}
+
+#[derive(Clone, Copy)]
+pub enum StatusType {
+    Poison,      // Damage over time
+    Sleep,       // Skip turns
+    Confusion,   // Random targets
+    Silence,     // Cannot use magic
+    Haste,       // Increased speed
+    Protect,     // Reduced physical damage
+    Shell,       // Reduced magic damage
+}
+
+// Combat animations with sprite-based effects
+fn spawn_damage_number(
+    commands: &mut Commands,
+    position: Vec3,
+    damage: i32,
+    damage_type: DamageType,
+) {
+    // Spawn floating damage numbers
+    // Different colors for different damage types
+    // Critical hits show larger numbers
+}
+
+// Victory handling
+fn check_battle_end(
+    party_query: Query<&CombatStats, With<PartyMember>>,
+    enemy_query: Query<&CombatStats, With<Enemy>>,
+    mut game_state: ResMut<NextState<GameState>>,
+    mut victory_screen: ResMut<VictoryScreen>,
+) {
+    // Check if all enemies defeated
+    // Check if party wiped
+    // Calculate experience and gold
+    // Determine item drops
+    // Transition to victory or game over
+}
+
+// Integration with other systems
+pub fn register_combat_abilities(app: &mut App) {
+    {% for class in config.party_system.character_classes %}
+    // Register abilities for {{ class.name }}
+    {% for ability in class.abilities %}
+    app.register_ability(AbilityId::{{ ability | replace(" ", "") }}, AbilityData {
+        name: "{{ ability }}",
+        mp_cost: 8,
+        target_type: TargetType::SingleEnemy,
+        effect: AbilityEffect::Damage { 
+            power: 150, 
+            element: Element::Neutral 
+        },
+    });
+    {% endfor %}
+    {% endfor %}
+}
+```
+
+Ensure the combat system:
+1. Feels responsive and fair
+2. Shows clear visual feedback for all actions
+3. Integrates with the party system
+4. Supports all defined character abilities
+5. Handles status effects properly
+6. Provides satisfying victory rewards
+7. Maintains 60 FPS during battles
+8. Uses the established sprite and effect palettes
