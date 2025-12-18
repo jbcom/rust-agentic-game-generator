@@ -341,10 +341,7 @@ impl ImageGenerator {
         }
 
         best_result.ok_or_else(|| {
-            anyhow::anyhow!(
-                "Failed to generate valid image after {} attempts",
-                max_attempts
-            )
+            anyhow::anyhow!("Failed to generate valid image after {max_attempts} attempts")
         })
     }
 
@@ -403,7 +400,7 @@ impl ImageGenerator {
             }
             async_openai::types::Image::Url { url, .. } => {
                 // If we got a URL instead, we need to fetch it
-                anyhow::bail!("Expected base64 data but got URL: {}", url);
+                anyhow::bail!("Expected base64 data but got URL: {url}");
             }
         };
 
@@ -708,12 +705,11 @@ pub mod sprite_sheets {
         // Generate each animation frame
         for animation in &animations {
             let description = format!(
-                "{} {} character performing {} animation, 16-bit pixel art sprite",
-                character_name, character_class, animation
+                "{character_name} {character_class} character performing {animation} animation, 16-bit pixel art sprite"
             );
 
             let sprite_data = generator
-                .generate_sprite(&format!("character_{}", animation), &description, None)
+                .generate_sprite(&format!("character_{animation}"), &description, None)
                 .await?;
 
             let sprite = image::load_from_memory(&sprite_data)?;
@@ -733,13 +729,11 @@ pub mod sprite_sheets {
         let mut tiles = Vec::new();
 
         for tile_type in &tile_types {
-            let description = format!(
-                "{} environment tile: {}, 16-bit pixel art, seamless tiling",
-                theme, tile_type
-            );
+            let description =
+                format!("{theme} environment tile: {tile_type}, 16-bit pixel art, seamless tiling");
 
             let tile_data = generator
-                .generate_sprite(&format!("tile_{}", tile_type), &description, None)
+                .generate_sprite(&format!("tile_{tile_type}"), &description, None)
                 .await?;
 
             let tile = image::load_from_memory(&tile_data)?;

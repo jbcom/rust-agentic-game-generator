@@ -213,7 +213,7 @@ impl StyleManager {
             "genesis_action" => StyleConfig::genesis_action_style(),
             "gb_retro" => StyleConfig::gameboy_style(),
             "nes_platformer" => StyleConfig::nes_platformer_style(),
-            _ => return Err(anyhow::anyhow!("Unknown style: {}", style_name)),
+            _ => return Err(anyhow::anyhow!("Unknown style: {style_name}")),
         };
 
         *self.style_config.lock().await = config;

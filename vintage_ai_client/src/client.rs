@@ -174,7 +174,7 @@ impl AiClient {
                 let config = TextConfig::for_game_description();
                 let text_gen = self.service.text();
 
-                let cache_key = format!("game_desc_{}", blend_name);
+                let cache_key = format!("game_desc_{blend_name}");
                 let cache_hit = text_gen.is_cached(&cache_key).await;
 
                 let result = text_gen.generate(&prompt, config).await?;
@@ -258,7 +258,7 @@ impl AiClient {
                 (
                     AiResult::Audio(result),
                     AiRequestType::Audio {
-                        purpose: format!("{:?}", audio_type),
+                        purpose: format!("{audio_type:?}"),
                     },
                     tokens,
                     cost,
@@ -311,7 +311,7 @@ impl AiClient {
                 let config = TextConfig::for_code_generation();
                 let text_gen = self.service.text();
 
-                let cache_key = format!("code_{}_{}", language, component_type);
+                let cache_key = format!("code_{language}_{component_type}");
                 let cache_hit = text_gen.is_cached(&cache_key).await;
 
                 let result = text_gen.generate(&prompt, config).await?;
@@ -511,7 +511,7 @@ impl AiClient {
         let tmpl = self
             .templates
             .get_template(template_name)
-            .unwrap_or_else(|_| panic!("{} template not found", template_name));
+            .unwrap_or_else(|_| panic!("{template_name} template not found"));
 
         let ctx = if let AudioType::SoundEffect(effect) = audio_type {
             context! {
@@ -527,7 +527,7 @@ impl AiClient {
         };
 
         tmpl.render(ctx)
-            .unwrap_or_else(|_| panic!("Failed to render {} template", template_name))
+            .unwrap_or_else(|_| panic!("Failed to render {template_name} template"))
     }
 
     fn build_code_prompt(

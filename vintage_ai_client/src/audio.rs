@@ -299,7 +299,7 @@ impl AudioGenerator {
                 sections.push(MusicSection {
                     name: pattern.to_string(),
                     duration: config.duration / 5.0, // Simple division
-                    description: format!("{} section with characteristic elements", pattern),
+                    description: format!("{pattern} section with characteristic elements"),
                 });
             }
         }
@@ -492,7 +492,7 @@ impl AudioGenerator {
     /// Extract frequency value from text
     fn extract_frequency(&self, text: &str, context: &str, default: f32) -> f32 {
         // Simple regex to find frequency values
-        let pattern = format!(r"{}[^\d]*(\d+)\s*[Hh]z", context);
+        let pattern = format!(r"{context}[^\d]*(\d+)\s*[Hh]z");
         if let Ok(re) = regex::Regex::new(&pattern)
             && let Some(cap) = re.captures(text)
             && let Some(freq_str) = cap.get(1)
@@ -502,7 +502,7 @@ impl AudioGenerator {
         }
 
         // Look for general frequency mentions
-        if text.contains(&format!("{} frequency", context))
+        if text.contains(&format!("{context} frequency"))
             && let Ok(re) = regex::Regex::new(r"(\d+)\s*[Hh]z")
         {
             for cap in re.captures_iter(text) {
@@ -570,7 +570,7 @@ impl AudioGenerator {
         let mut results = HashMap::new();
 
         for effect in effects {
-            let themed_effect = format!("{} {}", theme, effect);
+            let themed_effect = format!("{theme} {effect}");
             let description = self.generate_sound_effect(&themed_effect, 0.5).await?;
             results.insert(effect, description);
         }

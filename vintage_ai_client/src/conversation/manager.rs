@@ -287,7 +287,7 @@ impl ConversationManager {
                 );
                 messages.push(
                     ChatCompletionRequestSystemMessageArgs::default()
-                        .content(format!("{}{}", context_summary, blend_summary).as_str())
+                        .content(format!("{context_summary}{blend_summary}").as_str())
                         .build()?
                         .into(),
                 );

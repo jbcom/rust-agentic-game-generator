@@ -325,7 +325,7 @@ async fn generate_world(
 
         // Parse the response as JSON
         let world_data: WorldData = serde_json::from_str(&response)
-            .map_err(|e| anyhow::anyhow!("Failed to parse world data: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to parse world data: {e}"))?;
 
         return Ok(world_data);
     }

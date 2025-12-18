@@ -283,7 +283,7 @@ impl TokenCounter {
 
         self.encoders
             .get(encoder_name)
-            .context(format!("No encoder found for model: {}", model))
+            .context(format!("No encoder found for model: {model}"))
     }
 }
 
@@ -418,7 +418,7 @@ impl TokenOptimizer {
 
         for (i, sentence) in sentences.iter().enumerate() {
             let sentence_with_period = if i < sentences.len() - 1 {
-                format!("{}. ", sentence)
+                format!("{sentence}. ")
             } else {
                 sentence.to_string()
             };

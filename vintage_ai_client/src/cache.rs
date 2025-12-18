@@ -350,7 +350,7 @@ impl AiCache {
 
     /// Get disk cache path for key
     fn cache_path(&self, key: &str) -> PathBuf {
-        self.cache_dir.join(format!("{}.cache", key))
+        self.cache_dir.join(format!("{key}.cache"))
     }
 
     /// Load item from disk

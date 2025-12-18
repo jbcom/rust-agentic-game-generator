@@ -284,8 +284,7 @@ impl TextGenerator {
         config: TextConfig,
     ) -> Result<T> {
         let structured_prompt = format!(
-            "{}\n\nIMPORTANT: Respond ONLY with valid JSON, no additional text or formatting.",
-            prompt
+            "{prompt}\n\nIMPORTANT: Respond ONLY with valid JSON, no additional text or formatting."
         );
 
         let mut config = config;
@@ -376,9 +375,8 @@ pub mod game_content {
         world_context: &str,
     ) -> Result<String> {
         let prompt = format!(
-            "Create a compelling backstory for {}, a {} in a world where {}. \
-            Keep it concise but memorable, suitable for a 16-bit RPG.",
-            character_name, character_class, world_context
+            "Create a compelling backstory for {character_name}, a {character_class} in a world where {world_context}. \
+            Keep it concise but memorable, suitable for a 16-bit RPG."
         );
 
         generator
@@ -394,9 +392,8 @@ pub mod game_content {
         world_context: &str,
     ) -> Result<Quest> {
         let prompt = format!(
-            "Design a {} {} quest for a 16-bit style game set in {}. \
-            Include name, description, objectives, rewards, and dialogue snippets.",
-            difficulty, quest_type, world_context
+            "Design a {difficulty} {quest_type} quest for a 16-bit style game set in {world_context}. \
+            Include name, description, objectives, rewards, and dialogue snippets."
         );
 
         generator
@@ -486,7 +483,7 @@ pub mod templates {
                     )
                     .await?;
 
-                filled = filled.replace(&format!("{{{}}}", var), value.trim());
+                filled = filled.replace(&format!("{{{var}}}"), value.trim());
             }
 
             Ok(filled)
