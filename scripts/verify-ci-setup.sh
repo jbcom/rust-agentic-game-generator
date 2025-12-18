@@ -26,7 +26,8 @@ fi
 
 # Check 2: Workflow contains ALSA dependency installation
 echo -n "Checking for ALSA dependency installation... "
-if grep -q "libasound2-dev" ".github/workflows/rust.yml"; then
+if grep -q "Install system dependencies" ".github/workflows/rust.yml" && \
+   grep -q "libasound2-dev" ".github/workflows/rust.yml"; then
     echo -e "${GREEN}✓${NC} Configured"
 else
     echo -e "${RED}✗${NC} Missing"
@@ -57,22 +58,29 @@ fi
 
 # Check 5: Cargo check
 echo -n "Running cargo check... "
-if cargo check --all-targets --all-features > /tmp/cargo-check.log 2>&1; then
+CARGO_LOG=$(mktemp)
+if cargo check --all-targets --all-features > "$CARGO_LOG" 2>&1; then
     echo -e "${GREEN}✓${NC} No build errors"
+    rm -f "$CARGO_LOG"
 else
     echo -e "${RED}✗${NC} Build failed"
     echo -e "${YELLOW}Review errors:${NC}"
-    tail -20 /tmp/cargo-check.log
+    tail -20 "$CARGO_LOG"
+    rm -f "$CARGO_LOG"
     exit 1
 fi
 
 # Check 6: Clippy
 echo -n "Running clippy... "
-if cargo clippy --all-targets --all-features -- -D warnings > /dev/null 2>&1; then
+CLIPPY_LOG=$(mktemp)
+if cargo clippy --all-targets --all-features -- -D warnings > "$CLIPPY_LOG" 2>&1; then
     echo -e "${GREEN}✓${NC} No clippy warnings"
+    rm -f "$CLIPPY_LOG"
 else
     echo -e "${RED}✗${NC} Clippy warnings/errors found"
-    echo -e "${YELLOW}Action required:${NC} Run 'cargo clippy --all-targets --all-features' to see details"
+    echo -e "${YELLOW}Review output:${NC}"
+    tail -20 "$CLIPPY_LOG"
+    rm -f "$CLIPPY_LOG"
     exit 1
 fi
 
@@ -81,6 +89,8 @@ echo -e "${GREEN}=== All checks passed! ===${NC}"
 echo "Your branch should pass CI workflows."
 echo ""
 echo "Next steps:"
-echo "1. Commit any changes: git add . && git commit -m 'fix: apply CI requirements'"
-echo "2. Push to your branch: git push origin <branch-name>"
-echo "3. Check the GitHub Actions tab for workflow status"
+echo "1. Review changes: git status"
+echo "2. Stage changes: git add -A (review carefully first!)"
+echo "3. Commit: git commit -m 'fix: apply CI requirements'"
+echo "4. Push to your branch: git push origin <branch-name>"
+echo "5. Check the GitHub Actions tab for workflow status"
