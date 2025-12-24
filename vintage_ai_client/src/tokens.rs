@@ -93,21 +93,102 @@ impl Default for ModelPricing {
 
         // DALL-E pricing
         models.insert(
-            "dall-e-3".to_string(),
+            "dall-e-3-1024x1024-standard".to_string(),
             ModelCost {
                 prompt_cost_per_1k: 0.0,
                 completion_cost_per_1k: 0.0,
-                image_cost: Some(0.04), // Standard quality 1024x1024
+                image_cost: Some(0.04),
                 embedding_cost_per_1k: None,
             },
         );
 
         models.insert(
-            "dall-e-3-hd".to_string(),
+            "dall-e-3-1024x1024-hd".to_string(),
             ModelCost {
                 prompt_cost_per_1k: 0.0,
                 completion_cost_per_1k: 0.0,
-                image_cost: Some(0.08), // HD quality 1024x1024
+                image_cost: Some(0.08),
+                embedding_cost_per_1k: None,
+            },
+        );
+
+        models.insert(
+            "dall-e-3-1792x1024-standard".to_string(),
+            ModelCost {
+                prompt_cost_per_1k: 0.0,
+                completion_cost_per_1k: 0.0,
+                image_cost: Some(0.08),
+                embedding_cost_per_1k: None,
+            },
+        );
+
+        models.insert(
+            "dall-e-3-1024x1792-standard".to_string(),
+            ModelCost {
+                prompt_cost_per_1k: 0.0,
+                completion_cost_per_1k: 0.0,
+                image_cost: Some(0.08),
+                embedding_cost_per_1k: None,
+            },
+        );
+
+        models.insert(
+            "dall-e-3-1792x1024-hd".to_string(),
+            ModelCost {
+                prompt_cost_per_1k: 0.0,
+                completion_cost_per_1k: 0.0,
+                image_cost: Some(0.12),
+                embedding_cost_per_1k: None,
+            },
+        );
+
+        models.insert(
+            "dall-e-3-1024x1792-hd".to_string(),
+            ModelCost {
+                prompt_cost_per_1k: 0.0,
+                completion_cost_per_1k: 0.0,
+                image_cost: Some(0.12),
+                embedding_cost_per_1k: None,
+            },
+        );
+
+        // Additional sizes (mapping to similar pricing)
+        models.insert(
+            "dall-e-3-1536x1024-standard".to_string(),
+            ModelCost {
+                prompt_cost_per_1k: 0.0,
+                completion_cost_per_1k: 0.0,
+                image_cost: Some(0.08),
+                embedding_cost_per_1k: None,
+            },
+        );
+
+        models.insert(
+            "dall-e-3-1536x1024-hd".to_string(),
+            ModelCost {
+                prompt_cost_per_1k: 0.0,
+                completion_cost_per_1k: 0.0,
+                image_cost: Some(0.12),
+                embedding_cost_per_1k: None,
+            },
+        );
+
+        models.insert(
+            "dall-e-3-1024x1536-standard".to_string(),
+            ModelCost {
+                prompt_cost_per_1k: 0.0,
+                completion_cost_per_1k: 0.0,
+                image_cost: Some(0.08),
+                embedding_cost_per_1k: None,
+            },
+        );
+
+        models.insert(
+            "dall-e-3-1024x1536-hd".to_string(),
+            ModelCost {
+                prompt_cost_per_1k: 0.0,
+                completion_cost_per_1k: 0.0,
+                image_cost: Some(0.12),
                 embedding_cost_per_1k: None,
             },
         );
@@ -209,7 +290,13 @@ impl TokenCounter {
     }
 
     /// Record image generation
-    pub async fn record_image_generation(&self, model: &str, count: usize) -> Result<()> {
+    pub async fn record_image_generation(
+        &self,
+        model: &str,
+        width: u32,
+        height: u32,
+        count: usize,
+    ) -> Result<()> {
         let mut stats = self.stats.lock().await;
 
         if let Some(pricing) = self.pricing.models.get(model)
@@ -218,7 +305,7 @@ impl TokenCounter {
             let total_cost = image_cost * count as f64;
             stats.total_cost += total_cost;
             *stats.cost_by_model.entry(model.to_string()).or_insert(0.0) += total_cost;
-            stats.image_tokens += self.estimate_image_tokens(1024, 1024) as u64 * count as u64;
+            stats.image_tokens += self.estimate_image_tokens(width, height) as u64 * count as u64;
         }
 
         Ok(())

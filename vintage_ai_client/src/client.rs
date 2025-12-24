@@ -199,7 +199,8 @@ impl AiClient {
                 subjects,
             } => {
                 let prompt = self.build_concept_art_prompt(&game_name, &art_style, &subjects);
-                let config = ImageConfig::for_sprites(); // Use sprites config for concept art
+                let ai_config = self.config.read().await;
+                let config = ImageConfig::from_ai_config(&ai_config);
                 let image_gen = self.service.image();
 
                 let cache_key = format!("concept_art_{}_{}", game_name, subjects.join("_"));
@@ -353,7 +354,13 @@ impl AiClient {
             }
 
             AiTask::CustomImage { prompt, config } => {
-                let config = config.unwrap_or_default();
+                let config = match config {
+                    Some(c) => c,
+                    None => {
+                        let ai_config = self.config.read().await;
+                        ImageConfig::from_ai_config(&ai_config)
+                    }
+                };
                 let image_gen = self.service.image();
 
                 let cache_key = format!("custom_image_{}", &prompt[..prompt.len().min(50)]);

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["generate_character_backstory","generate_game_concept","generate_quest"]};

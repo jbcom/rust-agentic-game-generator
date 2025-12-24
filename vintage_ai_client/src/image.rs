@@ -23,7 +23,7 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, Semaphore};
 
 use super::{
-    AiGenerator,
+    AiConfig, AiGenerator,
     cache::{AiCache, ImageCache},
     consistency::{Color, ColorPalette, StyleManager},
     tokens::TokenCounter,
@@ -72,6 +72,49 @@ impl Default for ImageConfig {
 }
 
 impl ImageConfig {
+    /// Create image config from global AI config
+    pub fn from_ai_config(config: &AiConfig) -> Self {
+        let size = match config.image_size.as_str() {
+            "1024x1024" => ImageSize::S1024x1024,
+            "1792x1024" => ImageSize::S1792x1024,
+            "1024x1792" => ImageSize::S1024x1792,
+            _ => ImageSize::S1024x1024,
+        };
+
+        let quality = match config.image_quality.as_str() {
+            "hd" => ImageQuality::HD,
+            _ => ImageQuality::Standard,
+        };
+
+        let model = match config.image_model.as_str() {
+            "dall-e-2" => ImageModel::DallE2,
+            _ => ImageModel::DallE3,
+        };
+
+        Self {
+            model,
+            size,
+            quality,
+            n: 1,
+            response_format: ImageResponseFormat::B64Json,
+            enforce_consistency: config.optimize_costs,
+        }
+    }
+
+    /// Get dimensions for a given size
+    pub fn get_dimensions(size: &ImageSize) -> (u32, u32) {
+        match size {
+            ImageSize::S256x256 => (256, 256),
+            ImageSize::S512x512 => (512, 512),
+            ImageSize::S1024x1024 => (1024, 1024),
+            ImageSize::S1792x1024 => (1792, 1024),
+            ImageSize::S1024x1792 => (1024, 1792),
+            ImageSize::S1536x1024 => (1536, 1024),
+            ImageSize::S1024x1536 => (1024, 1536),
+            _ => (1024, 1024),
+        }
+    }
+
     /// Configuration for sprite generation
     pub fn for_sprites() -> Self {
         Self {
@@ -89,6 +132,30 @@ impl ImageConfig {
         Self {
             model: ImageModel::DallE3,
             size: ImageSize::S1792x1024,
+            quality: ImageQuality::HD,
+            n: 1,
+            response_format: ImageResponseFormat::B64Json,
+            enforce_consistency: true,
+        }
+    }
+
+    /// Configuration for wide background generation
+    pub fn for_backgrounds_wide() -> Self {
+        Self {
+            model: ImageModel::DallE3,
+            size: ImageSize::S1792x1024,
+            quality: ImageQuality::HD,
+            n: 1,
+            response_format: ImageResponseFormat::B64Json,
+            enforce_consistency: true,
+        }
+    }
+
+    /// Configuration for tall background generation
+    pub fn for_backgrounds_tall() -> Self {
+        Self {
+            model: ImageModel::DallE3,
+            size: ImageSize::S1024x1792,
             quality: ImageQuality::HD,
             n: 1,
             response_format: ImageResponseFormat::B64Json,
@@ -405,14 +472,20 @@ impl ImageGenerator {
         };
 
         // Track usage
-        let model_name = match config.quality {
-            ImageQuality::HD => "dall-e-3-hd",
-            _ => "dall-e-3",
+        let (width, height) = ImageConfig::get_dimensions(&config.size);
+        let quality_str = match config.quality {
+            ImageQuality::HD => "hd",
+            _ => "standard",
         };
+        let model_name = format!(
+            "dall-e-3-{}x{}-{}",
+            width, height, quality_str
+        );
+
         self.token_counter
             .lock()
             .await
-            .record_image_generation(model_name, 1)
+            .record_image_generation(&model_name, width, height, 1)
             .await?;
 
         // Cache result

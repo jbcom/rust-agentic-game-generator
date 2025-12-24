@@ -1,1 +1,0 @@
-rd_("Aavintage_ai_client")

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["GenerationPhase","MessageRole"],"struct":["BlendContext","Conversation","ConversationContext","ConversationMessage","ConversationSummary","GameConceptContext","GenerationProgress","MessageConfig"]};
