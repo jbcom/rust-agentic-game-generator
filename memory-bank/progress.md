@@ -195,3 +195,8 @@
 - Complete guided mode testing
 - Add freeform mode with under construction overlay
 - Update documentation
+### CI and Maintenance (COMPLETED)
+- Fixed documentation workflow to use pip install
+- Removed target/ from git tracking
+- Resolved all remaining Clippy warnings
+- Updated all dependencies to latest versions
