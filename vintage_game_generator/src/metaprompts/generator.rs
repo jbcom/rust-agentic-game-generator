@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 use crate::wizard::config::ProjectConfig;
+use futures::{Stream, StreamExt};
 
 // Import from vintage_ai_client - updated to new API
 use vintage_ai_client::{
@@ -140,6 +141,19 @@ impl GameGenerator {
         let (is_complete, game_config) = self.parse_game_config_from_response(&response);
 
         Ok((response, is_complete, game_config))
+    }
+
+    /// Continue game design conversation with streaming
+    pub async fn continue_game_design_conversation_stream(
+        &self,
+        conversation_id: &str,
+        user_input: &str,
+    ) -> anyhow::Result<impl Stream<Item = anyhow::Result<String>>> {
+        let conversation_manager = self.ai_service.conversation();
+        conversation_manager
+            .send_message_stream(conversation_id, user_input.to_string())
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to start conversation stream: {}", e))
     }
 
     /// Generate full game with progress tracking

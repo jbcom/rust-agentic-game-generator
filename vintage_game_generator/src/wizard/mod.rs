@@ -45,6 +45,7 @@ impl Plugin for WizardPlugin {
                 generate_mode::draw_generate_ui.run_if(in_mode(AppMode::Generate)),
                 watchers::check_prompt_changes.run_if(in_mode(AppMode::Generate)),
                 pipeline::process_generation_queue.run_if(in_mode(AppMode::Generate)),
+                steps::freeform::process_conversation_stream.run_if(in_mode(AppMode::Generate)),
                 list_mode::draw_list_ui.run_if(in_mode(AppMode::List)),
             ),
         );

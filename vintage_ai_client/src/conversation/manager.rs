@@ -11,6 +11,8 @@ use async_openai::{
     },
 };
 use chrono::Utc;
+use futures::Stream;
+use futures::StreamExt;
 use minijinja::Environment;
 use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
@@ -120,6 +122,16 @@ impl ConversationManager {
             .await
     }
 
+    /// Send a message and get a streaming response
+    pub async fn send_message_stream(
+        &self,
+        conversation_id: &str,
+        message: String,
+    ) -> Result<impl Stream<Item = Result<String>>> {
+        self.send_message_stream_with_config(conversation_id, message, None)
+            .await
+    }
+
     /// Send a message with custom configuration
     pub async fn send_message_with_config(
         &self,
@@ -199,6 +211,104 @@ impl ConversationManager {
         conversation.updated_at = Utc::now();
 
         Ok(assistant_message)
+    }
+
+    /// Send a message with custom configuration and get a streaming response
+    pub async fn send_message_stream_with_config(
+        &self,
+        conversation_id: &str,
+        message: String,
+        config: Option<MessageConfig>,
+    ) -> Result<impl Stream<Item = Result<String>>> {
+        let mut conversations = self.conversations.lock().await;
+        let conversation = conversations
+            .get_mut(conversation_id)
+            .ok_or_else(|| anyhow::anyhow!("Conversation not found"))?;
+
+        // Add user message
+        let user_tokens = self.estimate_tokens(&message).await?;
+        conversation.messages.push_back(ConversationMessage {
+            role: MessageRole::User,
+            content: message.clone(),
+            timestamp: Utc::now(),
+            tokens: user_tokens,
+        });
+
+        // Prepare messages for API
+        let api_messages = self.prepare_api_messages(conversation)?;
+
+        // Create request with optional custom config
+        let config = config.unwrap_or_default();
+        let request = CreateChatCompletionRequestArgs::default()
+            .model(config.model.as_str())
+            .messages(api_messages)
+            .temperature(config.temperature)
+            .max_tokens(config.max_tokens)
+            .stream(true)
+            .build()?;
+
+        let mut stream = self.client.chat().create_stream(request).await?;
+
+        let conversation_id = conversation_id.to_string();
+        let conversations_arc = self.conversations.clone();
+        let _token_counter = self.token_counter.clone();
+        let _model_name = config.model.clone();
+
+        Ok(async_stream::try_stream! {
+            let mut full_response = String::new();
+
+            while let Some(result) = stream.next().await {
+                match result {
+                    Ok(response) => {
+                        if let Some(choice) = response.choices.first() {
+                            if let Some(content) = &choice.delta.content {
+                                full_response.push_str(content);
+                                yield content.clone();
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        Err(anyhow::anyhow!("Stream error: {}", e))?;
+                    }
+                }
+            }
+
+            // After stream completes, update the conversation history
+            let mut convs = conversations_arc.lock().await;
+            if let Some(conv) = convs.get_mut(&conversation_id) {
+                // Approximate token count (4 chars = 1 token)
+                let assistant_tokens = full_response.len() / 4;
+
+                conv.messages.push_back(ConversationMessage {
+                    role: MessageRole::Assistant,
+                    content: full_response,
+                    timestamp: Utc::now(),
+                    tokens: assistant_tokens,
+                });
+
+                // Trim context
+                let max_messages = conv.context.max_context_messages;
+                let system_count = conv.messages.iter().filter(|m| matches!(m.role, MessageRole::System)).count();
+                let max_non_system = max_messages.saturating_sub(system_count);
+                let non_system_count = conv.messages.iter().filter(|m| !matches!(m.role, MessageRole::System)).count();
+
+                if non_system_count > max_non_system {
+                    let to_remove = non_system_count - max_non_system;
+                    let mut removed = 0;
+                    while removed < to_remove {
+                        for i in 0..conv.messages.len() {
+                            if !matches!(conv.messages[i].role, MessageRole::System) {
+                                conv.messages.remove(i);
+                                removed += 1;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                conv.updated_at = Utc::now();
+            }
+        })
     }
 
     /// Update conversation context (e.g., after blend changes)

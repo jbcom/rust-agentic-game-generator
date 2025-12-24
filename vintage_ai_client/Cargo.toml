@@ -9,9 +9,7 @@ repository.workspace = true
 [dependencies]
 # Core async runtime
 tokio.workspace = true
-
-# OpenAI API client
-async-openai.workspace = true
+async-openai = { workspace = true, features = ["full"] }
 
 # Error handling
 anyhow.workspace = true
@@ -54,6 +52,7 @@ regex.workspace = true
 
 # Optional Bevy integration
 bevy = { workspace = true, optional = true }
+async-stream = "0.3.6"
 
 [features]
 default = []

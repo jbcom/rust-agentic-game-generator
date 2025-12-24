@@ -70,9 +70,11 @@ pub struct FreeformGameConfig {
 /// Conversation state for AI interaction
 #[derive(Default)]
 pub struct ConversationState {
+    pub conversation_id: Option<String>,
     pub history: Vec<ConversationEntry>,
     pub current_input: String,
     pub is_processing: bool,
+    pub is_streaming: bool,
     pub error_message: Option<String>,
     pub context_summary: String,
 }
@@ -97,6 +99,19 @@ pub struct ConversationMetadata {
     pub topic: String,
     pub decisions_made: Vec<String>,
     pub alternatives_considered: Vec<String>,
+}
+
+/// Events for streaming conversation
+pub enum ConversationStreamEvent {
+    Token(String),
+    Finished,
+    Error(String),
+}
+
+/// Resource to hold the streaming channel
+#[derive(Resource, Default)]
+pub struct ConversationStream {
+    pub receiver: Option<tokio::sync::mpsc::UnboundedReceiver<ConversationStreamEvent>>,
 }
 
 /// Export configuration for generation

@@ -6,6 +6,7 @@ use crate::wizard::{
     steps::{
         draw_welcome_step,
         guided::{GuidedModeState, render_guided_mode, setup_guided_mode},
+        freeform::{FreeformModeState, ConversationStream, render_freeform_mode, setup_freeform_mode},
     },
 };
 use bevy::prelude::*;
@@ -32,9 +33,11 @@ pub fn draw_generate_ui(
     mut contexts: EguiContexts,
     mut app_state: ResMut<AppState>,
     directories: Res<AppDirectories>,
-    _pipeline: Res<GenerationPipeline>,
+    pipeline: Res<GenerationPipeline>,
     _switch_mode_events: EventWriter<SwitchModeEvent>,
     guided_state: Option<ResMut<GuidedModeState>>,
+    freeform_state: Option<ResMut<FreeformModeState>>,
+    stream_res: Option<ResMut<ConversationStream>>,
     commands: Commands,
     mut exit_events: EventWriter<AppExit>,
 ) {
@@ -120,6 +123,19 @@ pub fn draw_generate_ui(
                 // Show loading state for this frame
                 draw_wizard_frame(ctx, &mut app_state, |ui| {
                     ui.label("Loading guided mode...");
+                });
+            }
+        }
+        WizardStep::FreeformMode => {
+            debug!("Drawing freeform mode step");
+            if let (Some(freeform_state), Some(stream_res)) = (freeform_state, stream_res) {
+                render_freeform_mode(contexts, app_state, freeform_state, commands, pipeline, stream_res);
+            } else {
+                warn!("No freeform state found, setting up freeform mode");
+                setup_freeform_mode(commands);
+
+                draw_wizard_frame(ctx, &mut app_state, |ui| {
+                    ui.label("Loading freeform mode...");
                 });
             }
         }

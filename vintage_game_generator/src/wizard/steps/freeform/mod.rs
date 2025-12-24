@@ -5,6 +5,7 @@
 
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
+use crate::wizard::pipeline::GenerationPipeline;
 use crate::wizard::state::{AppState, WizardStep};
 
 mod types;
@@ -22,6 +23,8 @@ pub fn render_freeform_mode(
     app_state: ResMut<AppState>,
     freeform_state: ResMut<FreeformModeState>,
     commands: Commands,
+    pipeline: Res<GenerationPipeline>,
+    stream_res: ResMut<ConversationStream>,
 ) {
     // Route to appropriate sub-step
     match &freeform_state.current_step {
@@ -47,7 +50,7 @@ pub fn render_freeform_mode(
             wizard_steps::render_review(contexts, app_state, freeform_state);
         }
         FreeformStep::Conversation => {
-            conversation::render_conversation(contexts, app_state, freeform_state, commands);
+            conversation::render_conversation(contexts, app_state, freeform_state, commands, pipeline, stream_res);
         }
     }
 }
@@ -56,6 +59,7 @@ pub fn render_freeform_mode(
 pub fn setup_freeform_mode(mut commands: Commands) {
     // Insert the freeform mode state
     commands.insert_resource(FreeformModeState::default());
+    commands.insert_resource(ConversationStream::default());
 
     // Initialize AI client if needed
     if let Ok(api_key) = std::env::var("OPENAI_API_KEY") {
@@ -69,4 +73,5 @@ pub fn setup_freeform_mode(mut commands: Commands) {
 /// Cleanup resources when leaving freeform mode
 pub fn cleanup_freeform_mode(mut commands: Commands) {
     commands.remove_resource::<FreeformModeState>();
+    commands.remove_resource::<ConversationStream>();
 }
