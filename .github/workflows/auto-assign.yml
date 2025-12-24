@@ -45,7 +45,7 @@ jobs:
           assignees: copilot
           numOfAssignee: 1
           
-      # actions/github-script v8
+      # actions/github-script v8.0.0
       - name: Add triage label to issues
         if: github.event_name == 'issues'
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd

@@ -63,8 +63,8 @@ impl AppDirectories {
                 let path = entry.path();
 
                 // Check if it's a directory and looks like a UUID
-                if path.is_dir() {
-                    if let Some(dir_name) = path.file_name() {
+                if path.is_dir()
+                    && let Some(dir_name) = path.file_name() {
                         let dir_str = dir_name.to_string_lossy();
                         // Basic UUID format check (8-4-4-4-12 hex characters)
                         if dir_str.len() == 36 && dir_str.chars().filter(|&c| c == '-').count() == 4
@@ -79,7 +79,6 @@ impl AppDirectories {
                             projects.push((path, project_name));
                         }
                     }
-                }
             }
         }
 

@@ -80,18 +80,18 @@ pub fn draw_welcome_step(
                             match clicked_id.as_str() {
                                 "guided" => {
                                     action = Some(WelcomeAction::GuidedMode);
-                                    if let Some(config) = config_manager.as_mut() {
-                                        if let Err(e) = config.set_wizard_mode("guided") {
-                                            eprintln!("Failed to save mode selection: {e}");
-                                        }
+                                    if let Some(config) = config_manager.as_mut()
+                                        && let Err(e) = config.set_wizard_mode("guided")
+                                    {
+                                        eprintln!("Failed to save mode selection: {e}");
                                     }
                                 },
                                 "freeform" => {
                                     action = Some(WelcomeAction::FreeformMode);
-                                    if let Some(config) = config_manager.as_mut() {
-                                        if let Err(e) = config.set_wizard_mode("freeform") {
-                                            eprintln!("Failed to save mode selection: {e}");
-                                        }
+                                    if let Some(config) = config_manager.as_mut()
+                                        && let Err(e) = config.set_wizard_mode("freeform")
+                                    {
+                                        eprintln!("Failed to save mode selection: {e}");
                                     }
                                 },
                                 _ => {}
@@ -144,21 +144,21 @@ pub fn draw_welcome_step(
 
                         let mut icon_shown = false;
                         for path in &icon_paths {
-                            if let Ok(image_bytes) = std::fs::read(path) {
-                                if let Ok(image) = image::load_from_memory(&image_bytes) {
-                                    let size = egui::Vec2::new(200.0, 200.0);
-                                    let texture_id = ui.ctx().load_texture(
-                                        "guided_mode_icon_transparent",
-                                        egui::ColorImage::from_rgba_unmultiplied(
-                                            [image.width() as _, image.height() as _],
-                                            &image.to_rgba8().into_raw()
-                                        ),
-                                        Default::default()
-                                    );
-                                    ui.image((texture_id.id(), size));
-                                    icon_shown = true;
-                                    break;
-                                }
+                            if let Ok(image_bytes) = std::fs::read(path)
+                                && let Ok(image) = image::load_from_memory(&image_bytes)
+                            {
+                                let size = egui::Vec2::new(200.0, 200.0);
+                                let texture_id = ui.ctx().load_texture(
+                                    "guided_mode_icon_transparent",
+                                    egui::ColorImage::from_rgba_unmultiplied(
+                                        [image.width() as _, image.height() as _],
+                                        &image.to_rgba8().into_raw()
+                                    ),
+                                    Default::default()
+                                );
+                                ui.image((texture_id.id(), size));
+                                icon_shown = true;
+                                break;
                             }
                         }
 
@@ -188,10 +188,10 @@ pub fn draw_welcome_step(
 
                     if response.inner {
                         action = Some(WelcomeAction::GuidedMode);
-                        if let Some(config) = config_manager.as_mut() {
-                            if let Err(e) = config.set_wizard_mode("guided") {
-                                eprintln!("Failed to save mode selection: {e}");
-                            }
+                        if let Some(config) = config_manager.as_mut()
+                            && let Err(e) = config.set_wizard_mode("guided")
+                        {
+                            eprintln!("Failed to save mode selection: {e}");
                         }
                     }
                 });
@@ -223,21 +223,21 @@ pub fn draw_welcome_step(
 
                         let mut icon_shown = false;
                         for path in &icon_paths {
-                            if let Ok(image_bytes) = std::fs::read(path) {
-                                if let Ok(image) = image::load_from_memory(&image_bytes) {
-                                    let size = egui::Vec2::new(200.0, 200.0);
-                                    let texture_id = ui.ctx().load_texture(
-                                        "freeform_mode_icon",
-                                        egui::ColorImage::from_rgba_unmultiplied(
-                                            [image.width() as _, image.height() as _],
-                                            &image.to_rgba8().into_raw()
-                                        ),
-                                        Default::default()
-                                    );
-                                    ui.image((texture_id.id(), size));
-                                    icon_shown = true;
-                                    break;
-                                }
+                            if let Ok(image_bytes) = std::fs::read(path)
+                                && let Ok(image) = image::load_from_memory(&image_bytes)
+                            {
+                                let size = egui::Vec2::new(200.0, 200.0);
+                                let texture_id = ui.ctx().load_texture(
+                                    "freeform_mode_icon",
+                                    egui::ColorImage::from_rgba_unmultiplied(
+                                        [image.width() as _, image.height() as _],
+                                        &image.to_rgba8().into_raw()
+                                    ),
+                                    Default::default()
+                                );
+                                ui.image((texture_id.id(), size));
+                                icon_shown = true;
+                                break;
                             }
                         }
 
@@ -267,10 +267,10 @@ pub fn draw_welcome_step(
 
                     if response.inner {
                         action = Some(WelcomeAction::FreeformMode);
-                        if let Some(config) = config_manager.as_mut() {
-                            if let Err(e) = config.set_wizard_mode("freeform") {
-                                eprintln!("Failed to save mode selection: {e}");
-                            }
+                        if let Some(config) = config_manager.as_mut()
+                            && let Err(e) = config.set_wizard_mode("freeform")
+                        {
+                            eprintln!("Failed to save mode selection: {e}");
                         }
                     }
                 });

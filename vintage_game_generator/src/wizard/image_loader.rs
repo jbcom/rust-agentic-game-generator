@@ -20,11 +20,10 @@ pub fn load_texture_from_path(
     name: &str,
 ) -> Result<TextureHandle> {
     // Check cache first
-    if let Ok(cache) = TEXTURE_CACHE.lock() {
-        if let Some(texture) = cache.get(name) {
+    if let Ok(cache) = TEXTURE_CACHE.lock()
+        && let Some(texture) = cache.get(name) {
             return Ok(texture.clone());
         }
-    }
 
     // Load image from disk
     let image_bytes = std::fs::read(path.as_ref())?;
@@ -58,11 +57,10 @@ pub fn load_texture_from_memory(
     name: &str,
 ) -> Result<TextureHandle> {
     // Check cache first
-    if let Ok(cache) = TEXTURE_CACHE.lock() {
-        if let Some(texture) = cache.get(name) {
+    if let Ok(cache) = TEXTURE_CACHE.lock()
+        && let Some(texture) = cache.get(name) {
             return Ok(texture.clone());
         }
-    }
 
     // Load image
     let image = image::load_from_memory(image_data)?;

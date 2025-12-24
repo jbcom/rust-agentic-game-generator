@@ -97,13 +97,12 @@ pub fn render_guided_mode(
                             guided_state.blend_result = None;
                         }
 
-                        if ui.button("✅ Export Configuration").clicked() {
-                            if let Some(export) = export_blend_to_config(&guided_state) {
+                        if ui.button("✅ Export Configuration").clicked()
+                            && let Some(export) = export_blend_to_config(&guided_state) {
                                 // Store the export in app state
                                 app_state.set_guided_export(export);
                                 app_state.set_wizard_step(WizardStep::Complete);
                             }
-                        }
                     } else {
                         // No blend result, go back
                         guided_state.current_step = 0;

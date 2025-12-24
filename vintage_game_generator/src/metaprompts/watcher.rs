@@ -238,11 +238,10 @@ impl RateLimiter {
     }
 
     fn can_proceed(&mut self) -> bool {
-        if let Some(last) = self.last_action {
-            if last.elapsed() < self.min_interval {
+        if let Some(last) = self.last_action
+            && last.elapsed() < self.min_interval {
                 return false;
             }
-        }
         self.last_action = Some(Instant::now());
         true
     }

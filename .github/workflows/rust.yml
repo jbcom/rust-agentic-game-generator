@@ -15,9 +15,14 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      # actions/checkout v6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+      # dtolnay/rust-toolchain v1
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+        with:
+          toolchain: stable
+      # Swatinem/rust-cache v2.8.2
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -28,9 +33,14 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      # actions/checkout v6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+      # dtolnay/rust-toolchain v1
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+        with:
+          toolchain: stable
+      # Swatinem/rust-cache v2.8.2
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -41,11 +51,15 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # actions/checkout v6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+      # dtolnay/rust-toolchain v1
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
         with:
+          toolchain: stable
           components: clippy
-      - uses: Swatinem/rust-cache@v2
+      # Swatinem/rust-cache v2.8.2
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -56,9 +70,12 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # actions/checkout v6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+      # dtolnay/rust-toolchain v1
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
         with:
+          toolchain: stable
           components: rustfmt
       - run: cargo fmt --all -- --check
 
@@ -66,9 +83,14 @@ jobs:
     name: Documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      # actions/checkout v6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+      # dtolnay/rust-toolchain v1
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+        with:
+          toolchain: stable
+      # Swatinem/rust-cache v2.8.2
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -76,17 +98,3 @@ jobs:
       - run: cargo doc --no-deps --all-features
         env:
           RUSTDOCFLAGS: -D warnings
-
-  # Note: WASM builds are currently disabled as the vintage_ai_client uses
-  # tokio (full features) and reqwest which require native networking.
-  # Re-enable when WASM-compatible features are added.
-  # wasm:
-  #   name: WASM Build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: dtolnay/rust-toolchain@stable
-  #       with:
-  #         targets: wasm32-unknown-unknown
-  #     - uses: Swatinem/rust-cache@v2
-  #     - run: cargo check --target wasm32-unknown-unknown -p vintage_ai_client --no-default-features

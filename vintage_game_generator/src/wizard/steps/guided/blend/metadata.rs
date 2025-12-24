@@ -75,26 +75,22 @@ fn build_genre_weights(game: &TimelineGame) -> Vec<f32> {
     if let Some(deck) = game.deck {
         let deck_lower = deck.to_lowercase();
 
-        if deck_lower.contains("puzzle") {
-            if let Some(idx) = STANDARD_GENRES.iter().position(|&g| g == "Puzzle") {
+        if deck_lower.contains("puzzle")
+            && let Some(idx) = STANDARD_GENRES.iter().position(|&g| g == "Puzzle") {
                 weights[idx] = weights[idx].max(0.3f32);
             }
-        }
-        if deck_lower.contains("adventure") {
-            if let Some(idx) = STANDARD_GENRES.iter().position(|&g| g == "Adventure") {
+        if deck_lower.contains("adventure")
+            && let Some(idx) = STANDARD_GENRES.iter().position(|&g| g == "Adventure") {
                 weights[idx] = weights[idx].max(0.3f32);
             }
-        }
-        if deck_lower.contains("action") {
-            if let Some(idx) = STANDARD_GENRES.iter().position(|&g| g == "Action") {
+        if deck_lower.contains("action")
+            && let Some(idx) = STANDARD_GENRES.iter().position(|&g| g == "Action") {
                 weights[idx] = weights[idx].max(0.3f32);
             }
-        }
-        if deck_lower.contains("strategy") {
-            if let Some(idx) = STANDARD_GENRES.iter().position(|&g| g == "Strategy") {
+        if deck_lower.contains("strategy")
+            && let Some(idx) = STANDARD_GENRES.iter().position(|&g| g == "Strategy") {
                 weights[idx] = weights[idx].max(0.3f32);
             }
-        }
     }
 
     // Normalize weights

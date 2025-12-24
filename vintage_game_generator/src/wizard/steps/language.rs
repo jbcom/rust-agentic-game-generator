@@ -172,11 +172,10 @@ pub fn draw_language_step(
     });
 
     // Update config manager if a selection was made
-    if let (Some(choice), Some(config)) = (selected, config_manager.as_mut()) {
-        if let Err(e) = config.set_language(choice.as_str()) {
+    if let (Some(choice), Some(config)) = (selected, config_manager.as_mut())
+        && let Err(e) = config.set_language(choice.as_str()) {
             eprintln!("Failed to save language selection: {e}");
         }
-    }
 
     selected
 }

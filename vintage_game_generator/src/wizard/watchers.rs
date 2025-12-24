@@ -134,33 +134,32 @@ pub fn check_prompt_changes(
                 );
 
                 // Check if it's in the generated directory
-                if event.path.to_string_lossy().contains("generated") {
-                    // Add to validation queue
-                    if let (Some(content), Some(file_name)) = (
+                if event.path.to_string_lossy().contains("generated")
+                    && let (Some(content), Some(file_name)) = (
                         std::fs::read_to_string(&event.path).ok(),
                         event.path.file_stem().and_then(|s| s.to_str()),
-                    ) {
-                        // Extract phase from path
-                        let phase = event
-                            .path
-                            .parent()
-                            .and_then(|p| p.file_name())
-                            .and_then(|s| s.to_str())
-                            .unwrap_or("unknown")
-                            .to_string();
+                    )
+                {
+                    // Extract phase from path
+                    let phase = event
+                        .path
+                        .parent()
+                        .and_then(|p| p.file_name())
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("unknown")
+                        .to_string();
 
-                        app_state.add_prompt_to_validate(
-                            phase,
-                            file_name.to_string(),
-                            content,
-                            event.path.clone(),
-                        );
+                    app_state.add_prompt_to_validate(
+                        phase,
+                        file_name.to_string(),
+                        content,
+                        event.path.clone(),
+                    );
 
-                        app_state.add_log(
-                            LogLevel::Info,
-                            format!("Added {file_name} to validation queue"),
-                        );
-                    }
+                    app_state.add_log(
+                        LogLevel::Info,
+                        format!("Added {file_name} to validation queue"),
+                    );
                 }
             }
             FileEventType::Modified => {
@@ -208,33 +207,33 @@ pub fn check_config_changes(
     }
 
     // Check modification time
-    if let Ok(metadata) = std::fs::metadata(&config_file) {
-        if let Ok(modified) = metadata.modified() {
-            // Compare with last known modification time
-            if tracker.last_modified.is_none() {
-                tracker.last_modified = Some(modified);
-            } else if tracker.last_modified != Some(modified) {
-                tracker.last_modified = Some(modified);
+    if let Ok(metadata) = std::fs::metadata(&config_file)
+        && let Ok(modified) = metadata.modified()
+    {
+        // Compare with last known modification time
+        if tracker.last_modified.is_none() {
+            tracker.last_modified = Some(modified);
+        } else if tracker.last_modified != Some(modified) {
+            tracker.last_modified = Some(modified);
 
-                app_state.add_log(
-                    LogLevel::Info,
-                    "Configuration file changed, reloading...".to_string(),
-                );
+            app_state.add_log(
+                LogLevel::Info,
+                "Configuration file changed, reloading...".to_string(),
+            );
 
-                // Reload config
-                if let Ok(content) = std::fs::read_to_string(&config_file) {
-                    match toml::from_str::<crate::metaprompts::GameConfig>(&content) {
-                        Ok(config) => {
-                            app_state.set_game_specification(config);
-                            app_state.add_log(
-                                LogLevel::Success,
-                                "Configuration reloaded successfully".to_string(),
-                            );
-                        }
-                        Err(e) => {
-                            app_state
-                                .add_log(LogLevel::Error, format!("Failed to parse config: {e}"));
-                        }
+            // Reload config
+            if let Ok(content) = std::fs::read_to_string(&config_file) {
+                match toml::from_str::<crate::metaprompts::GameConfig>(&content) {
+                    Ok(config) => {
+                        app_state.set_game_specification(config);
+                        app_state.add_log(
+                            LogLevel::Success,
+                            "Configuration reloaded successfully".to_string(),
+                        );
+                    }
+                    Err(e) => {
+                        app_state
+                            .add_log(LogLevel::Error, format!("Failed to parse config: {e}"));
                     }
                 }
             }

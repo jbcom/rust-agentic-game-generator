@@ -7,7 +7,7 @@
 //! - Style consistency
 
 use anyhow::{Context, Result};
-use async_openai::{Client, config::OpenAIConfig, types::CreateEmbeddingRequestArgs};
+use async_openai::{Client, config::OpenAIConfig, types::embeddings::CreateEmbeddingRequestArgs};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;

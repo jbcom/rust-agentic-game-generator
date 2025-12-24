@@ -56,11 +56,10 @@ pub fn draw_generate_ui(
     );
 
     // Initialize config manager if not present
-    if app_state.config_manager.is_none() {
-        if let Ok(config_manager) = ConfigManager::new(&directories.project_dir, None) {
+    if app_state.config_manager.is_none()
+        && let Ok(config_manager) = ConfigManager::new(&directories.project_dir, None) {
             app_state.set_config_manager(config_manager);
         }
-    }
 
     // Handle exit dialog
     if app_state.show_exit_dialog {

@@ -10,7 +10,7 @@ use anyhow::{Context, Result};
 use async_openai::{
     Client,
     config::OpenAIConfig,
-    types::{
+    types::chat::{
         ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
         CreateChatCompletionRequestArgs,
     },

@@ -1,6 +1,6 @@
 //! Type definitions for conversation management
 
-use async_openai::types::Role;
+use async_openai::types::chat::Role;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};

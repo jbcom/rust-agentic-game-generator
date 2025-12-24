@@ -215,7 +215,7 @@ fn validate_prompt(content: &str) -> Vec<String> {
         // TODO: Add more specific code block validation
         // For now, just check that code blocks are properly closed
         let open_blocks = content.matches("```").count();
-        if open_blocks % 2 != 0 {
+        if !open_blocks.is_multiple_of(2) {
             errors.push("Unclosed code block detected".to_string());
         }
     }
