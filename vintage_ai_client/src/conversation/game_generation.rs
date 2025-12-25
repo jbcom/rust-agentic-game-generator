@@ -49,7 +49,9 @@ impl GameGenerationExt for ConversationManager {
         let mut context = starters::game_generation_context(project_config.clone());
 
         // Load system prompt from template if available
-        if let Some(env) = self.template_env.lock().await.as_ref() && let Ok(template) = env.get_template("01_design") {
+        if let Some(env) = self.template_env.lock().await.as_ref()
+            && let Ok(template) = env.get_template("01_design")
+        {
             let system_prompt = if let Some(config) = &project_config {
                 template.render(context!(project => config))?
             } else {
@@ -92,7 +94,9 @@ impl GameGenerationExt for ConversationManager {
 
         if is_complete {
             // Extract the game config
-            if let Some(env) = self.template_env.lock().await.as_ref() && let Ok(template) = env.get_template("03_extract_game_config") {
+            if let Some(env) = self.template_env.lock().await.as_ref()
+                && let Ok(template) = env.get_template("03_extract_game_config")
+            {
                 let extraction_prompt = template.render(context!())?;
 
                 let config_json = self
@@ -173,7 +177,9 @@ impl GameGenerationExt for ConversationManager {
         });
 
         // Generate AI systems
-        if let Some(env) = self.template_env.lock().await.as_ref() && let Ok(template) = env.get_template("04_ai_systems") {
+        if let Some(env) = self.template_env.lock().await.as_ref()
+            && let Ok(template) = env.get_template("04_ai_systems")
+        {
             let prompt = if let Some(config) = &project_config {
                 template.render(context!(config => config))?
             } else {
@@ -321,7 +327,9 @@ async fn generate_style_guide(
     config: &GameConfig,
     project_config: Option<&serde_json::Value>,
 ) -> Result<String> {
-    if let Some(env) = manager.template_env.lock().await.as_ref() && let Ok(template) = env.get_template("02_style") {
+    if let Some(env) = manager.template_env.lock().await.as_ref()
+        && let Ok(template) = env.get_template("02_style")
+    {
         let prompt = if let Some(project) = project_config {
             template.render(context!(
                 project => project,
@@ -356,7 +364,9 @@ async fn generate_world(
     style_guide: &str,
     project_config: Option<&serde_json::Value>,
 ) -> Result<WorldData> {
-    if let Some(env) = manager.template_env.lock().await.as_ref() && let Ok(template) = env.get_template("03_world") {
+    if let Some(env) = manager.template_env.lock().await.as_ref()
+        && let Ok(template) = env.get_template("03_world")
+    {
         let prompt = if let Some(project) = project_config {
             template.render(context!(
                 project => project,
