@@ -14,31 +14,75 @@ pub struct SimilarityEngine {
     pub era_weight: f32,
     /// Weight for complexity similarity (0.0-1.0)
     pub complexity_weight: f32,
+    /// Weight for semantic similarity from embeddings (0.0-1.0)
+    pub semantic_weight: f32,
 }
 
 impl SimilarityEngine {
     pub fn new() -> Self {
         Self {
-            genre_weight: 0.3,
-            mechanic_weight: 0.3,
-            era_weight: 0.2,
-            complexity_weight: 0.2,
+            genre_weight: 0.2,
+            mechanic_weight: 0.2,
+            era_weight: 0.1,
+            complexity_weight: 0.1,
+            semantic_weight: 0.4,
         }
     }
 
     /// Compute similarity between two games
     pub fn compute_similarity(&self, game1: &GameMetadata, game2: &GameMetadata) -> f32 {
-        let vector_sim = game1.feature_vector.similarity(&game2.feature_vector);
+        let mut similarity = 0.0;
+        let mut total_weight = 0.0;
+
+        // If both have semantic embeddings, they provide the strongest signal
+        if let (Some(embed1), Some(embed2)) = (
+            &game1.feature_vector.semantic_embedding,
+            &game2.feature_vector.semantic_embedding,
+        ) {
+            let semantic_sim = self.cosine_similarity(embed1, embed2);
+            similarity += semantic_sim * self.semantic_weight;
+            total_weight += self.semantic_weight;
+        }
+
+        // Use base_similarity for traditional features to avoid double-counting embeddings
+        let base_sim = game1.feature_vector.base_similarity(&game2.feature_vector);
+        let feature_weight = self.genre_weight + self.mechanic_weight + self.complexity_weight;
+        similarity += base_sim * feature_weight;
+        total_weight += feature_weight;
+
+        // Era similarity
         let era_sim = self.compute_era_similarity(game1, game2);
+        similarity += era_sim * self.era_weight;
+        total_weight += self.era_weight;
 
-        // Weighted combination
-        let weighted_sim = vector_sim
-            * (self.genre_weight + self.mechanic_weight + self.complexity_weight)
-            + era_sim * self.era_weight;
+        if total_weight > 0.0 {
+            similarity / total_weight
+        } else {
+            0.0
+        }
+    }
 
-        // Normalize
-        weighted_sim
-            / (self.genre_weight + self.mechanic_weight + self.era_weight + self.complexity_weight)
+    /// Calculate cosine similarity between two vectors
+    fn cosine_similarity(&self, a: &[f32], b: &[f32]) -> f32 {
+        if a.is_empty() || b.is_empty() || a.len() != b.len() {
+            return 0.0;
+        }
+
+        let mut dot_product = 0.0;
+        let mut magnitude_a = 0.0;
+        let mut magnitude_b = 0.0;
+
+        for i in 0..a.len() {
+            dot_product += a[i] * b[i];
+            magnitude_a += a[i] * a[i];
+            magnitude_b += b[i] * b[i];
+        }
+
+        if magnitude_a == 0.0 || magnitude_b == 0.0 {
+            return 0.0;
+        }
+
+        dot_product / (magnitude_a.sqrt() * magnitude_b.sqrt())
     }
 
     /// Compute era similarity
@@ -138,5 +182,84 @@ mod tests {
         let similarity = engine.compute_similarity(&game1, &game2);
         assert!(similarity > 0.5); // Should be quite similar
         assert!(similarity < 1.0); // But not identical
+    }
+
+    #[test]
+    fn test_semantic_similarity() {
+        let mut engine = SimilarityEngine::new();
+        engine.semantic_weight = 0.8;
+        engine.genre_weight = 0.05;
+        engine.mechanic_weight = 0.05;
+        engine.era_weight = 0.05;
+        engine.complexity_weight = 0.05;
+
+        let game1 = GameMetadata {
+            game_id: "game1".to_string(),
+            name: "Test Game 1".to_string(),
+            year: 1985,
+            feature_vector: FeatureVector {
+                genre_weights: vec![1.0],
+                mechanic_flags: vec![true],
+                platform_generation: 3,
+                complexity: 0.5,
+                action_strategy_balance: 0.0,
+                single_multi_balance: 0.0,
+                semantic_embedding: Some(vec![1.0, 0.0, 0.0]),
+            },
+            common_pairings: HashMap::new(),
+            genre_affinities: HashMap::new(),
+            mechanic_tags: vec![],
+            era_category: "mid_80s".to_string(),
+            mood_tags: Vec::new(),
+        };
+
+        let game2 = GameMetadata {
+            game_id: "game2".to_string(),
+            name: "Test Game 2".to_string(),
+            year: 1985,
+            feature_vector: FeatureVector {
+                genre_weights: vec![1.0],
+                mechanic_flags: vec![true],
+                platform_generation: 3,
+                complexity: 0.5,
+                action_strategy_balance: 0.0,
+                single_multi_balance: 0.0,
+                semantic_embedding: Some(vec![1.0, 0.0, 0.0]),
+            },
+            common_pairings: HashMap::new(),
+            genre_affinities: HashMap::new(),
+            mechanic_tags: vec![],
+            era_category: "mid_80s".to_string(),
+            mood_tags: Vec::new(),
+        };
+
+        let similarity = engine.compute_similarity(&game1, &game2);
+        assert_eq!(similarity, 1.0);
+
+        let game3 = GameMetadata {
+            game_id: "game3".to_string(),
+            name: "Test Game 3".to_string(),
+            year: 1985,
+            feature_vector: FeatureVector {
+                genre_weights: vec![1.0],
+                mechanic_flags: vec![true],
+                platform_generation: 3,
+                complexity: 0.5,
+                action_strategy_balance: 0.0,
+                single_multi_balance: 0.0,
+                semantic_embedding: Some(vec![0.0, 1.0, 0.0]),
+            },
+            common_pairings: HashMap::new(),
+            genre_affinities: HashMap::new(),
+            mechanic_tags: vec![],
+            era_category: "mid_80s".to_string(),
+            mood_tags: Vec::new(),
+        };
+
+        let similarity_13 = engine.compute_similarity(&game1, &game3);
+        // Semantic similarity will be 0.0 (orthogonal vectors)
+        // Traditional similarity will be 1.0 (same features)
+        // Weighted average: 0.0 * 0.8 + 1.0 * 0.2 = 0.2
+        assert!((similarity_13 - 0.2).abs() < 0.001);
     }
 }

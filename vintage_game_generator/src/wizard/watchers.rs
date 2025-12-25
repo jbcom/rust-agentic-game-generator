@@ -232,8 +232,7 @@ pub fn check_config_changes(
                         );
                     }
                     Err(e) => {
-                        app_state
-                            .add_log(LogLevel::Error, format!("Failed to parse config: {e}"));
+                        app_state.add_log(LogLevel::Error, format!("Failed to parse config: {e}"));
                     }
                 }
             }

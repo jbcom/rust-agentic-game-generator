@@ -131,6 +131,8 @@ pub struct AiConfig {
     pub image_model: String,
     /// Audio generation model (e.g., tts-1, tts-1-hd)
     pub audio_model: String,
+    /// Embedding model (e.g., text-embedding-3-small, text-embedding-3-large)
+    pub embedding_model: String,
 
     // Generation Parameters
     /// Temperature for generation (0.0 - 2.0)
@@ -174,6 +176,7 @@ impl Default for AiConfig {
             text_model: "gpt-4".to_string(),
             image_model: "dall-e-3".to_string(),
             audio_model: "tts-1".to_string(),
+            embedding_model: "text-embedding-3-small".to_string(),
 
             // Generation defaults
             temperature: 0.8,
@@ -218,6 +221,11 @@ impl AiConfig {
 
     pub fn with_audio_model(mut self, model: impl Into<String>) -> Self {
         self.audio_model = model.into();
+        self
+    }
+
+    pub fn with_embedding_model(mut self, model: impl Into<String>) -> Self {
+        self.embedding_model = model.into();
         self
     }
 

@@ -239,9 +239,10 @@ pub fn platforms_by_release_year(start_year: i32, end_year: i32) -> Vec<&'static
             if let Some(date_str) = p.release_date {
                 // Parse year from date string (format: "YYYY-MM-DD HH:MM:SS")
                 if let Some(year_str) = date_str.split('-').next()
-                    && let Ok(year) = year_str.parse::<i32>() {
-                        return year >= start_year && year <= end_year;
-                    }
+                    && let Ok(year) = year_str.parse::<i32>()
+                {
+                    return year >= start_year && year <= end_year;
+                }
             }
             false
         })

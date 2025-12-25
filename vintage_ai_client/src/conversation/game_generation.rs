@@ -185,12 +185,22 @@ impl GameGenerationExt for ConversationManager {
             } else {
                 template.render(context!())?
             };
-            
-            let ai_systems = self.generate_response(&prompt).await?;
+
+            let ai_systems = self
+                .send_message_with_config(
+                    &conversation_id,
+                    prompt,
+                    Some(MessageConfig {
+                        model: "gpt-4-turbo".to_string(),
+                        temperature: 0.3,
+                        max_tokens: 4000,
+                    }),
+                )
+                .await?;
             let ai_systems_path = project_path.join("src").join("npc_ai.rs");
             std::fs::write(&ai_systems_path, ai_systems)?;
         }
-        
+
         // Phase 4: Generate Assets
         progress_callback(GenerationProgress {
             phase: GenerationPhase::AssetGeneration,

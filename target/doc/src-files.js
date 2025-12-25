@@ -1,2 +1,0 @@
-createSrcSidebar('[["vintage_ai_client",["",[["conversation",[],["game_generation.rs","manager.rs","mod.rs","starters.rs","types.rs"]]],["audio.rs","cache.rs","client.rs","consistency.rs","embeddings.rs","game_types.rs","image.rs","lib.rs","text.rs","tokens.rs"]]]]');
-//{"start":19,"fragment_lengths":[245]}

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["ValidationCriteria"],"fn":["pack_sprites"],"mod":["recoloring","sprite_sheets"],"struct":["GameConcept","ImageConfig","ImageGenerator","SpriteRequest","ValidationResult"]};
