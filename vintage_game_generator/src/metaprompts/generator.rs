@@ -70,18 +70,15 @@ impl ConversationState {
 
 pub struct GameGenerator {
     ai_service: AiService,
-    #[allow(dead_code)]
-    templates_dir: PathBuf,
     project_config: Option<ProjectConfig>,
 }
 
 impl GameGenerator {
-    pub async fn new(templates_dir: PathBuf) -> anyhow::Result<Self> {
+    pub async fn new() -> anyhow::Result<Self> {
         let ai_service = AiService::from_env()?;
 
         Ok(Self {
             ai_service,
-            templates_dir,
             project_config: None,
         })
     }
