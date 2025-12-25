@@ -28,6 +28,7 @@ vintage_blending_core = { path = "../vintage_blending_core" }
 vintage_ai_client = { path = "../vintage_ai_client", features = ["bevy"] }
 async-openai.workspace = true
 tokio.workspace = true
+async-stream = "0.3.6"
 
 # Template Engine
 minijinja = { workspace = true, features = ["loader"] }

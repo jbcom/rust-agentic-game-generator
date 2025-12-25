@@ -150,11 +150,17 @@ impl GameGenerator {
         conversation_id: &str,
         user_input: &str,
     ) -> anyhow::Result<impl Stream<Item = anyhow::Result<String>>> {
-        let conversation_manager = self.ai_service.conversation();
-        conversation_manager
-            .send_message_stream(conversation_id, user_input.to_string())
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to start conversation stream: {}", e))
+        let manager = self.ai_service.conversation();
+        let conversation_id = conversation_id.to_string();
+        let user_input = user_input.to_string();
+
+        Ok(async_stream::try_stream! {
+            let stream = manager.send_message_stream(&conversation_id, user_input).await?;
+            futures::pin_mut!(stream);
+            while let Some(item) = stream.next().await {
+                yield item?;
+            }
+        })
     }
 
     /// Generate full game with progress tracking
@@ -324,7 +330,9 @@ impl GameGenerator {
         // Look for JSON game config in the response
         if response.contains("\"title\"") && response.contains("\"genre\"") {
             // Try to extract and parse JSON - use safe string slicing
-            if let Some(start) = response.find('{') && let Some(end) = response.rfind('}') {
+            if let Some(start) = response.find('{')
+                && let Some(end) = response.rfind('}')
+            {
                 // Use get() for safe UTF-8 string slicing to avoid panics
                 if let Some(json_str) = response.get(start..=end)
                     && let Ok(config) = serde_json::from_str::<GameConfig>(json_str)
