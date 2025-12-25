@@ -10,12 +10,9 @@ use crate::wizard::state::{AppState, WizardStep};
 
 mod types;
 mod conversation;
-// mod wizard_steps;
-// mod ai_interface;
 
 pub use types::*;
 pub use conversation::*;
-// pub use wizard_steps::*;
 
 /// Main entry point for rendering freeform mode
 pub fn render_freeform_mode(
@@ -29,31 +26,24 @@ pub fn render_freeform_mode(
     // Route to appropriate sub-step
     match &freeform_state.current_step {
         FreeformStep::Introduction => {
-            // wizard_steps::render_introduction(contexts, app_state, freeform_state);
             ui_placeholder(contexts, "Introduction");
         }
         FreeformStep::BasicInfo => {
-            // wizard_steps::render_basic_info(contexts, app_state, freeform_state);
             ui_placeholder(contexts, "Basic Info");
         }
         FreeformStep::GameplayDesign => {
-            // wizard_steps::render_gameplay_design(contexts, app_state, freeform_state);
             ui_placeholder(contexts, "Gameplay Design");
         }
         FreeformStep::VisualStyle => {
-            // wizard_steps::render_visual_style(contexts, app_state, freeform_state);
             ui_placeholder(contexts, "Visual Style");
         }
         FreeformStep::Features => {
-            // wizard_steps::render_features(contexts, app_state, freeform_state);
             ui_placeholder(contexts, "Features");
         }
         FreeformStep::TechnicalSettings => {
-            // wizard_steps::render_technical_settings(contexts, app_state, freeform_state);
             ui_placeholder(contexts, "Technical Settings");
         }
         FreeformStep::Review => {
-            // wizard_steps::render_review(contexts, app_state, freeform_state);
             ui_placeholder(contexts, "Review");
         }
         FreeformStep::Conversation => {
