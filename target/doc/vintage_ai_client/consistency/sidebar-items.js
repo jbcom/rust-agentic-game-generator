@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["DitheringPattern","LightDirection","OutlineStyle","Perspective","ShadingTechnique"],"mod":["sprite_sheets"],"struct":["Color","ColorPalette","SpriteFrame","SpriteSheetMetadata","SpriteSpecs","StyleConfig","StyleManager","StyleRules","UiSpecs"]};

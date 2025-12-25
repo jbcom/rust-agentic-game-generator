@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["blend_exploration_context","game_design_context","game_generation_context","technical_assistance_context"]};

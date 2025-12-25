@@ -18,7 +18,21 @@
    - Pricing and token estimation for Claude 3 Opus, Sonnet, and Haiku
    - Integrated with the unified `TextGenerator` interface
 
-3. **Fixed Build Environment**:
+3. **Created `bevy-combat` crate as a reusable combat system template**:
+   - Extracted from `cosmic-cults` (simulated) as a generic framework
+   - Damage calculation supporting multiple types (Eldritch, Corrupted, etc.)
+   - Effect stacking system with thematic flavors (Madness, Void Corruption)
+   - Progression system for XP and leveling
+   - Combat state machine using Bevy States
+
+4. **Implemented MinJinja template system for all AI prompts**:
+   - System prompts (game designer, dialogue writer)
+   - Text generation prompts (descriptions, marketing, code)
+   - Image generation prompts (sprites, tilesets, style guides)
+   - Audio generation prompts (music, sound effects)
+   - Style consistency prompts
+
+5. **Fixed Build Environment**:
    - Installed Rust and cargo (v1.92.0)
    - Verified crate compilation and resolved `async-openai` 0.32 API changes
 

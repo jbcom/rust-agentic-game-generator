@@ -21,7 +21,15 @@
    - Shared AI client functionality for all crates
    - Supports OpenAI and Anthropic APIs
    - Handles text generation, embeddings, and more
-   - Located at `crates/vintage_ai_client/`
+   - Located at `vintage_ai_client/`
+
+2. **Created `bevy-combat` Crate** (COMPLETED):
+   - Generic combat systems template for Bevy games
+   - Damage calculation framework (Physical, Magical, Eldritch, Corrupted, True)
+   - Effect stacking system (Poison, Bleed, Stun, Madness, Void Corruption)
+   - XP and leveling with progression curves
+   - Combat state machine using Bevy states
+   - Located at `bevy-combat/`
    - **MinJinja Template Integration** (COMPLETED):
      - All AI modules now use MinJinja templates
      - Created comprehensive prompt library:

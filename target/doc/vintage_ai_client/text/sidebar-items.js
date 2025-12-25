@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["game_content","templates"],"struct":["GameConcept","Quest","TextConfig","TextGenerator"]};

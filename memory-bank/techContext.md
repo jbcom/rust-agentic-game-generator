@@ -36,6 +36,7 @@
 - **bevy_kira_audio** - Audio playback
 - **bevy_yarnspinner** - Dialogue system
 - **bevy_rapier2d** - Physics (optional)
+- **bevy-combat** - (Internal) Generic combat system template
 
 ### Development Tools
 - **cargo-watch** - Auto-reload during development

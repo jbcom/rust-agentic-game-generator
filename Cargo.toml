@@ -1,5 +1,5 @@
 [workspace]
-members = ["vintage_ai_client", "vintage_blending_core", "vintage_build_tools", "vintage_game_generator"]
+members = ["bevy-combat", "vintage_ai_client", "vintage_blending_core", "vintage_build_tools", "vintage_game_generator"]
 resolver = "2"
 
 [workspace.package]

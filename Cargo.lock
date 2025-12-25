@@ -587,6 +587,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy-combat"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bevy",
+ "rand 0.8.5",
+ "serde",
+]
+
+[[package]]
 name = "bevy-inspector-egui"
 version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
