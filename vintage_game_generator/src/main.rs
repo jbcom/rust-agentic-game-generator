@@ -42,6 +42,10 @@ struct Args {
     #[arg(long = "audio-model", default_value = "tts-1")]
     audio_model: String,
 
+    /// Embedding model (e.g., text-embedding-3-small)
+    #[arg(long = "embedding-model", default_value = "text-embedding-3-small")]
+    embedding_model: String,
+
     /// Temperature for text generation (0.0-2.0)
     #[arg(long = "temperature", default_value = "0.8")]
     temperature: f32,
@@ -90,6 +94,7 @@ fn create_ai_config(args: &Args) -> AiConfig {
         text_model: args.text_model.clone(),
         image_model: args.image_model.clone(),
         audio_model: args.audio_model.clone(),
+        embedding_model: args.embedding_model.clone(),
 
         // Generation Parameters
         temperature: args.temperature,

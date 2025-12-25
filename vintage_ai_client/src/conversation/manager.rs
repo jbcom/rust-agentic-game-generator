@@ -124,8 +124,8 @@ impl ConversationManager {
 
     /// Send a message and get a streaming response
     pub async fn send_message_stream(
-        &self,
-        conversation_id: &str,
+        self,
+        conversation_id: String,
         message: String,
     ) -> Result<impl Stream<Item = Result<String>>> {
         self.send_message_stream_with_config(conversation_id, message, None)
@@ -215,14 +215,14 @@ impl ConversationManager {
 
     /// Send a message with custom configuration and get a streaming response
     pub async fn send_message_stream_with_config(
-        &self,
-        conversation_id: &str,
+        self,
+        conversation_id: String,
         message: String,
         config: Option<MessageConfig>,
     ) -> Result<impl Stream<Item = Result<String>>> {
         let mut conversations = self.conversations.lock().await;
         let conversation = conversations
-            .get_mut(conversation_id)
+            .get_mut(&conversation_id)
             .ok_or_else(|| anyhow::anyhow!("Conversation not found"))?;
 
         // Add user message
@@ -260,11 +260,9 @@ impl ConversationManager {
             while let Some(result) = stream.next().await {
                 match result {
                     Ok(response) => {
-                        if let Some(choice) = response.choices.first() {
-                            if let Some(content) = &choice.delta.content {
-                                full_response.push_str(content);
-                                yield content.clone();
-                            }
+                        if let Some(content) = response.choices.first().and_then(|c| c.delta.content.as_ref()) {
+                            full_response.push_str(content);
+                            yield content.clone();
                         }
                     }
                     Err(e) => {

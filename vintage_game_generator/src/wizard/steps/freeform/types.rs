@@ -1,12 +1,11 @@
 //! Types and data structures for freeform mode
 
 use bevy::prelude::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// The current step in the freeform wizard process
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum FreeformStep {
-    #[default]
     Introduction,      // Welcome and explain the process
     BasicInfo,         // Game name, genre, tagline
     GameplayDesign,    // Core mechanics, progression
@@ -14,7 +13,8 @@ pub enum FreeformStep {
     Features,          // Combat, inventory, dialogue
     TechnicalSettings, // Performance, platforms
     Review,            // Review before conversation
-    Conversation,      // AI conversation phase
+    #[default]
+    Conversation, // AI conversation phase
 }
 
 /// Main state for freeform mode

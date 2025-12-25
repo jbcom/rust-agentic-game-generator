@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 use crate::wizard::config::ProjectConfig;
-use futures::{Stream, StreamExt};
+use futures::Stream;
 
 // Import from vintage_ai_client - updated to new API
 use vintage_ai_client::{
@@ -147,12 +147,12 @@ impl GameGenerator {
     /// Continue game design conversation with streaming
     pub async fn continue_game_design_conversation_stream(
         &self,
-        conversation_id: &str,
-        user_input: &str,
+        conversation_id: String,
+        user_input: String,
     ) -> anyhow::Result<impl Stream<Item = anyhow::Result<String>>> {
         let conversation_manager = self.ai_service.conversation();
         conversation_manager
-            .send_message_stream(conversation_id, user_input.to_string())
+            .send_message_stream(conversation_id, user_input)
             .await
             .map_err(|e| anyhow::anyhow!("Failed to start conversation stream: {}", e))
     }
@@ -324,12 +324,11 @@ impl GameGenerator {
         // Look for JSON game config in the response
         if response.contains("\"title\"") && response.contains("\"genre\"") {
             // Try to extract and parse JSON - use safe string slicing
-            if let Some(start) = response.find('{')
-                && let Some(end) = response.rfind('}')
-            {
+            if let (Some(start), Some(end)) = (response.find('{'), response.rfind('}')) {
                 // Use get() for safe UTF-8 string slicing to avoid panics
-                if let Some(json_str) = response.get(start..=end)
-                    && let Ok(config) = serde_json::from_str::<GameConfig>(json_str)
+                if let Some(config) = response
+                    .get(start..=end)
+                    .and_then(|s| serde_json::from_str::<GameConfig>(s).ok())
                 {
                     return (true, Some(config));
                 }

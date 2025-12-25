@@ -1,4 +1,5 @@
 // Module for wizard steps - new flow with visual mode selection
+pub mod freeform;
 pub mod guided;
 pub mod language;
 pub mod welcome;

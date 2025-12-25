@@ -25,7 +25,7 @@ impl Progression {
     pub fn add_xp(&mut self, amount: u32) -> u32 {
         self.experience += amount;
         let mut levels_gained = 0;
-        
+
         while self.experience >= self.next_level_xp {
             self.experience -= self.next_level_xp;
             self.level += 1;
@@ -33,7 +33,7 @@ impl Progression {
             // Progressive XP curve (example: each level needs 20% more XP)
             self.next_level_xp = (self.next_level_xp as f32 * 1.2) as u32;
         }
-        
+
         levels_gained
     }
 }
@@ -58,7 +58,10 @@ pub fn handle_xp_gain(
             let old_level = progression.level;
             let levels_gained = progression.add_xp(0);
             if levels_gained > 0 {
-                info!("Entity {:?} leveled up: {} -> {}", entity, old_level, progression.level);
+                info!(
+                    "Entity {:?} leveled up: {} -> {}",
+                    entity, old_level, progression.level
+                );
                 level_up_events.write(LevelUpEvent {
                     entity,
                     new_level: progression.level,

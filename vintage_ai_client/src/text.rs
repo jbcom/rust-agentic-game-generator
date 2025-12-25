@@ -165,10 +165,15 @@ impl TextGenerator {
             .generate_key("text", prompt, &params);
 
         // Check cache first
-        if let Some(cached) = self.cache.lock().await.get(&cache_key).await {
-            if let CachedData::Text(text) = cached.data {
-                return Ok(text);
-            }
+        if let Some(CachedData::Text(text)) = self
+            .cache
+            .lock()
+            .await
+            .get(&cache_key)
+            .await
+            .map(|c| c.data)
+        {
+            return Ok(text);
         }
 
         // Build messages

@@ -504,7 +504,7 @@ impl AiClient {
         let manager = self.service.conversation();
         let conversation_id = conversation_id.to_string();
         Ok(async_stream::try_stream! {
-            let stream = manager.send_message_stream(&conversation_id, message).await?;
+            let stream = manager.send_message_stream(conversation_id, message).await?;
             futures::pin_mut!(stream);
             while let Some(item) = stream.next().await {
                 yield item?;

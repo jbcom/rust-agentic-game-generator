@@ -1,11 +1,14 @@
 //! AI conversation interface for freeform mode
 
-use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts};
-use futures::StreamExt;
-use crate::wizard::state::AppState;
+use super::{
+    ConversationEntry, ConversationRole, ConversationStream, ConversationStreamEvent,
+    FreeformModeState,
+};
 use crate::wizard::pipeline::GenerationPipeline;
-use super::{FreeformModeState, ConversationEntry, ConversationRole, ConversationStream, ConversationStreamEvent};
+use crate::wizard::state::AppState;
+use bevy::prelude::*;
+use bevy_egui::{EguiContexts, egui};
+use futures::StreamExt;
 
 /// Render the AI conversation interface
 pub fn render_conversation(
@@ -16,7 +19,9 @@ pub fn render_conversation(
     pipeline: Res<GenerationPipeline>,
     mut stream_res: ResMut<ConversationStream>,
 ) {
-    let Ok(ctx) = contexts.ctx_mut() else { return; };
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
 
     egui::CentralPanel::default().show(ctx, |ui| {
         // Header
@@ -47,7 +52,9 @@ pub fn render_conversation(
                 }
 
                 // Show processing indicator
-                if freeform_state.conversation.is_processing && !freeform_state.conversation.is_streaming {
+                if freeform_state.conversation.is_processing
+                    && !freeform_state.conversation.is_streaming
+                {
                     ui.horizontal(|ui| {
                         ui.spinner();
                         ui.label("AI is thinking...");
@@ -67,10 +74,12 @@ pub fn render_conversation(
             let response = ui.text_edit_multiline(&mut freeform_state.conversation.current_input);
 
             // Focus on the text input
-            if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                if !freeform_state.conversation.current_input.trim().is_empty() && !freeform_state.conversation.is_processing {
-                    send_message(&mut freeform_state, &pipeline, stream_res.reborrow());
-                }
+            if response.lost_focus()
+                && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                && !freeform_state.conversation.current_input.trim().is_empty()
+                && !freeform_state.conversation.is_processing
+            {
+                send_message(&mut freeform_state, &pipeline, stream_res.reborrow());
             }
 
             ui.vertical(|ui| {
@@ -80,10 +89,10 @@ pub fn render_conversation(
                         freeform_state.conversation.is_streaming = false;
                         stream_res.receiver = None;
                     }
-                } else {
-                    if ui.button("Send").clicked() && !freeform_state.conversation.current_input.trim().is_empty() {
-                        send_message(&mut freeform_state, &pipeline, stream_res.reborrow());
-                    }
+                } else if ui.button("Send").clicked()
+                    && !freeform_state.conversation.current_input.trim().is_empty()
+                {
+                    send_message(&mut freeform_state, &pipeline, stream_res.reborrow());
                 }
 
                 if ui.button("Export").clicked() {
@@ -172,23 +181,28 @@ fn send_message(
         if let Some(generator) = generator_lock.as_ref() {
             // Start or continue conversation
             let result = if let Some(id) = &conversation_id {
-                generator.continue_game_design_conversation_stream(id, &message).await
+                generator
+                    .continue_game_design_conversation_stream(id.clone(), message)
+                    .await
             } else {
                 // If no conversation ID, start a new one
                 match generator.start_game_design_conversation(&message).await {
-                    Ok((id, initial_response)) => {
+                    Ok((id, _initial_response)) => {
                         // This is a bit complex because we already added the user message.
                         // For simplicity, we'll just use the stream for subsequent messages.
                         // But since we need a stream, let's just use a dummy id for now
                         // or better, fix GameGenerator to have a proper start_stream.
-                        generator.continue_game_design_conversation_stream(&id, "").await
-                    },
+                        generator
+                            .continue_game_design_conversation_stream(id, "".to_string())
+                            .await
+                    }
                     Err(e) => Err(e),
                 }
             };
 
             match result {
-                Ok(mut stream) => {
+                Ok(stream) => {
+                    futures::pin_mut!(stream);
                     while let Some(token_result) = stream.next().await {
                         match token_result {
                             Ok(token) => {
@@ -207,7 +221,9 @@ fn send_message(
                 }
             }
         } else {
-            let _ = tx.send(ConversationStreamEvent::Error("AI Generator not initialized".to_string()));
+            let _ = tx.send(ConversationStreamEvent::Error(
+                "AI Generator not initialized".to_string(),
+            ));
         }
     });
 }
@@ -217,17 +233,27 @@ pub fn process_conversation_stream(
     mut freeform_state: ResMut<FreeformModeState>,
     mut stream_res: ResMut<ConversationStream>,
 ) {
-    let Some(rx) = &mut stream_res.receiver else { return; };
+    let mut finished = false;
+    let mut error = None;
 
-    while let Ok(event) = rx.try_recv() {
-        match event {
-            ConversationStreamEvent::Token(token) => {
-                // If the last message is from Assistant and we are streaming, append to it
-                // Otherwise, create a new Assistant message
-                if freeform_state.conversation.is_streaming {
-                    if let Some(last_entry) = freeform_state.conversation.history.last_mut() {
-                        if last_entry.role == ConversationRole::Assistant {
-                            last_entry.content.push_str(&token);
+    if let Some(rx) = &mut stream_res.receiver {
+        while let Ok(event) = rx.try_recv() {
+            match event {
+                ConversationStreamEvent::Token(token) => {
+                    // If the last message is from Assistant and we are streaming, append to it
+                    // Otherwise, create a new Assistant message
+                    if freeform_state.conversation.is_streaming {
+                        if let Some(last_entry) = freeform_state.conversation.history.last_mut() {
+                            if last_entry.role == ConversationRole::Assistant {
+                                last_entry.content.push_str(&token);
+                            } else {
+                                freeform_state.conversation.history.push(ConversationEntry {
+                                    role: ConversationRole::Assistant,
+                                    content: token,
+                                    timestamp: std::time::SystemTime::now(),
+                                    metadata: None,
+                                });
+                            }
                         } else {
                             freeform_state.conversation.history.push(ConversationEntry {
                                 role: ConversationRole::Assistant,
@@ -236,27 +262,26 @@ pub fn process_conversation_stream(
                                 metadata: None,
                             });
                         }
-                    } else {
-                        freeform_state.conversation.history.push(ConversationEntry {
-                            role: ConversationRole::Assistant,
-                            content: token,
-                            timestamp: std::time::SystemTime::now(),
-                            metadata: None,
-                        });
                     }
                 }
-            }
-            ConversationStreamEvent::Finished => {
-                freeform_state.conversation.is_processing = false;
-                freeform_state.conversation.is_streaming = false;
-                stream_res.receiver = None;
-            }
-            ConversationStreamEvent::Error(e) => {
-                freeform_state.conversation.error_message = Some(e);
-                freeform_state.conversation.is_processing = false;
-                freeform_state.conversation.is_streaming = false;
-                stream_res.receiver = None;
+                ConversationStreamEvent::Finished => {
+                    finished = true;
+                }
+                ConversationStreamEvent::Error(e) => {
+                    error = Some(e);
+                }
             }
         }
+    }
+
+    if finished {
+        freeform_state.conversation.is_processing = false;
+        freeform_state.conversation.is_streaming = false;
+        stream_res.receiver = None;
+    } else if let Some(e) = error {
+        freeform_state.conversation.error_message = Some(e);
+        freeform_state.conversation.is_processing = false;
+        freeform_state.conversation.is_streaming = false;
+        stream_res.receiver = None;
     }
 }

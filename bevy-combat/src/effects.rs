@@ -34,7 +34,11 @@ impl EffectRegistry {
     pub fn add_effect(&mut self, effect: StatusEffect) {
         // Simple stacking logic: if effect of same type exists, refresh duration if new one is stronger or longer
         // More complex stacking could be implemented here
-        if let Some(existing) = self.effects.iter_mut().find(|e| e.effect_type == effect.effect_type) {
+        if let Some(existing) = self
+            .effects
+            .iter_mut()
+            .find(|e| e.effect_type == effect.effect_type)
+        {
             if effect.power >= existing.power {
                 existing.power = effect.power;
                 existing.duration = effect.duration;
@@ -54,10 +58,7 @@ impl EffectRegistry {
 }
 
 /// System that updates status effect timers and removes expired ones
-pub fn update_effects(
-    time: Res<Time>,
-    mut query: Query<&mut EffectRegistry>,
-) {
+pub fn update_effects(time: Res<Time>, mut query: Query<&mut EffectRegistry>) {
     for mut registry in query.iter_mut() {
         registry.effects.retain_mut(|effect| {
             effect.duration.tick(time.delta());
@@ -67,12 +68,13 @@ pub fn update_effects(
 }
 
 /// Example system for handling Madness effect
-pub fn handle_madness(
-    mut query: Query<(&EffectRegistry, &mut Transform)>,
-    time: Res<Time>,
-) {
+pub fn handle_madness(mut query: Query<(&EffectRegistry, &mut Transform)>, time: Res<Time>) {
     for (registry, mut transform) in query.iter_mut() {
-        if let Some(madness) = registry.effects.iter().find(|e| e.effect_type == EffectType::Madness) {
+        if let Some(madness) = registry
+            .effects
+            .iter()
+            .find(|e| e.effect_type == EffectType::Madness)
+        {
             // Madness causes erratic movement
             let jitter = (time.elapsed_secs() * 10.0).sin() * madness.power * 0.1;
             transform.translation.x += jitter;
