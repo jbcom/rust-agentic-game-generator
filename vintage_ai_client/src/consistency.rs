@@ -546,8 +546,6 @@ impl StyleManager {
             Perspective::SideScroller => "side-scrolling view",
         }
     }
-
-    }
 }
 
 impl StyleConfig {
