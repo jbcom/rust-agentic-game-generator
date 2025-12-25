@@ -8,11 +8,11 @@ use bevy_egui::{egui, EguiContexts};
 use crate::wizard::pipeline::GenerationPipeline;
 use crate::wizard::state::{AppState, WizardStep};
 
-mod types;
 mod conversation;
+mod types;
 
-pub use types::*;
 pub use conversation::*;
+pub use types::*;
 
 /// Main entry point for rendering freeform mode
 pub fn render_freeform_mode(

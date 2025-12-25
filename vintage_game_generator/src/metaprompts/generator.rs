@@ -6,10 +6,7 @@ use futures::{Stream, StreamExt};
 
 // Import from vintage_ai_client - updated to new API
 use vintage_ai_client::{
-    AiService,
-    conversation::ConversationContext,
-    game_types::GameConfig,
-    text::TextConfig,
+    AiService, conversation::ConversationContext, game_types::GameConfig, text::TextConfig,
 };
 
 /// Progress tracking for game generation

@@ -1,11 +1,14 @@
 //! AI conversation interface for freeform mode
 
-use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts};
-use futures::StreamExt;
-use crate::wizard::state::AppState;
+use super::{
+    ConversationEntry, ConversationRole, ConversationStream, ConversationStreamEvent,
+    FreeformModeState,
+};
 use crate::wizard::pipeline::GenerationPipeline;
-use super::{FreeformModeState, ConversationEntry, ConversationRole, ConversationStream, ConversationStreamEvent};
+use crate::wizard::state::AppState;
+use bevy::prelude::*;
+use bevy_egui::{EguiContexts, egui};
+use futures::StreamExt;
 
 /// Render the AI conversation interface
 pub fn render_conversation(
@@ -195,6 +198,7 @@ fn send_message(
 
             match result {
                 Ok(mut stream) => {
+                    futures::pin_mut!(stream);
                     while let Some(token_result) = stream.next().await {
                         match token_result {
                             Ok(token) => {
@@ -257,12 +261,14 @@ pub fn process_conversation_stream(
             ConversationStreamEvent::Finished => {
                 freeform_state.conversation.is_processing = false;
                 freeform_state.conversation.is_streaming = false;
+                drop(rx);
                 stream_res.receiver = None;
             }
             ConversationStreamEvent::Error(e) => {
                 freeform_state.conversation.error_message = Some(e);
                 freeform_state.conversation.is_processing = false;
                 freeform_state.conversation.is_streaming = false;
+                drop(rx);
                 stream_res.receiver = None;
             }
         }

@@ -34,7 +34,11 @@ impl EffectRegistry {
     pub fn add_effect(&mut self, effect: StatusEffect) {
         // Simple stacking logic: if effect of same type exists, refresh duration if new one is stronger or longer
         // More complex stacking could be implemented here
-        if let Some(existing) = self.effects.iter_mut().find(|e| e.effect_type == effect.effect_type) {
+        if let Some(existing) = self
+            .effects
+            .iter_mut()
+            .find(|e| e.effect_type == effect.effect_type)
+        {
             if effect.power >= existing.power {
                 existing.power = effect.power;
                 existing.duration = effect.duration;
@@ -54,10 +58,7 @@ impl EffectRegistry {
 }
 
 /// System that updates status effect timers and removes expired ones
-pub fn update_effects(
-    time: Res<Time>,
-    mut query: Query<&mut EffectRegistry>,
-) {
+pub fn update_effects(time: Res<Time>, mut query: Query<&mut EffectRegistry>) {
     for mut registry in query.iter_mut() {
         registry.effects.retain_mut(|effect| {
             effect.duration.tick(time.delta());

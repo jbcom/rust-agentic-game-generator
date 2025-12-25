@@ -74,12 +74,8 @@ pub fn calculate_damage(
     let is_critical = rand::random::<f32>() < attacker_stats.crit_chance;
 
     let base_damage = match damage_type {
-        DamageType::Physical => {
-            (attacker_stats.attack * 2.0 - target_stats.defense).max(0.0)
-        }
-        DamageType::Magical => {
-            (attacker_stats.magic_attack * 2.0 - target_stats.magic_defense).max(0.0)
-        }
+        DamageType::Physical => (attacker_stats.attack * 2.0 - target_stats.defense).max(0.0),
+        DamageType::Magical => (attacker_stats.magic_attack * 2.0 - target_stats.magic_defense).max(0.0),
         DamageType::Eldritch => {
             // Eldritch damage scales with both, but targets lower defense
             let power = (attacker_stats.attack + attacker_stats.magic_attack) * 0.75;
