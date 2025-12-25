@@ -241,8 +241,8 @@ impl RateLimiter {
         if let Some(last) = self.last_action
             && last.elapsed() < self.min_interval
         {
-                return false;
-            }
+            return false;
+        }
         self.last_action = Some(Instant::now());
         true
     }

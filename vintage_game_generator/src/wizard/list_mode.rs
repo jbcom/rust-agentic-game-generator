@@ -52,8 +52,9 @@ pub fn draw_list_ui(
                 ui.separator();
 
                 if ui.button("Edit").clicked()
-                    && let Some((uuid, _, path)) = state.projects.get(state.selected_index) {
-                        info!("Switching to edit mode for project: {}", uuid);
+                    && let Some((uuid, _, path)) = state.projects.get(state.selected_index)
+                {
+                    info!("Switching to edit mode for project: {}", uuid);
                         // Send event to switch to Generate mode with this project
                         switch_mode_events.write(SwitchModeEvent {
                             new_mode: AppMode::Generate,

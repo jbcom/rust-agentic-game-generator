@@ -418,8 +418,8 @@ impl AiClient {
         conversation_id: &str,
         message: String,
     ) -> Result<impl Stream<Item = Result<String>>> {
-        self.service
-            .conversation()
+        let conversation = self.service.conversation();
+        conversation
             .send_message_stream(conversation_id, message)
             .await
     }

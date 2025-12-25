@@ -186,7 +186,7 @@ impl GameGenerationExt for ConversationManager {
                 template.render(context!())?
             };
             
-            let ai_systems = self.generate_response(&prompt).await?;
+            let ai_systems = self.send_message(&conversation_id, prompt).await?;
             let ai_systems_path = project_path.join("src").join("npc_ai.rs");
             std::fs::write(&ai_systems_path, ai_systems)?;
         }
