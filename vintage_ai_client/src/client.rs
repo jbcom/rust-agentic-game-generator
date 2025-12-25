@@ -4,7 +4,7 @@
 //! It manages all AI service instances and provides a clean, consistent interface.
 
 use anyhow::Result;
-use futures::Stream;
+use futures::{Stream, StreamExt};
 use minijinja::{Environment, context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -49,6 +49,7 @@ pub enum AiRequestType {
     Text { purpose: String },
     Image { purpose: String },
     Audio { purpose: String },
+    Embedding { model: String },
     Conversation { context: String },
 }
 
@@ -92,6 +93,10 @@ pub enum AiTask {
         prompt: String,
         config: Option<ImageConfig>,
     },
+    /// Generate embedding for text
+    GenerateEmbedding { text: String },
+    /// Generate embeddings for multiple texts
+    GenerateEmbeddingBatch { texts: Vec<String> },
 }
 
 #[derive(Debug, Clone)]
@@ -108,6 +113,8 @@ pub enum AiResult {
     Text(String),
     Image(Vec<u8>),
     Audio(Vec<u8>),
+    Embedding(Vec<f32>),
+    Embeddings(Vec<Vec<f32>>),
     Conversation {
         response: String,
         context_updated: bool,
@@ -374,6 +381,56 @@ impl AiClient {
                     cache_hit,
                 )
             }
+
+            AiTask::GenerateEmbedding { text } => {
+                let config = self.config.read().await.clone();
+                let embed_gen = self.service.embeddings();
+
+                let cache_key = format!("embedding:{}:{}", config.embedding_model, text);
+                let cache_hit = embed_gen.is_cached(&cache_key).await;
+
+                let result = embed_gen.generate(&text, &config).await?;
+                // Use default token count for now if estimate not easily available
+                let tokens = text.len() / 4; // Very rough estimate for embeddings
+                let cost = (tokens as f64 / 1000.0) * 0.00002; // Roughly text-embedding-3-small cost
+
+                (
+                    AiResult::Embedding(result),
+                    AiRequestType::Embedding {
+                        model: config.embedding_model.clone(),
+                    },
+                    tokens,
+                    cost,
+                    cache_hit,
+                )
+            }
+
+            AiTask::GenerateEmbeddingBatch { texts } => {
+                let config = self.config.read().await.clone();
+                let embed_gen = self.service.embeddings();
+
+                // Check cache for all (simplification: if all are cached)
+                // In practice, EmbeddingsGenerator handles individual caching
+                let cache_hit = false;
+
+                let result = embed_gen
+                    .generate_batch(texts.iter().map(|s| s.as_str()).collect(), &config)
+                    .await?;
+
+                let total_chars: usize = texts.iter().map(|t| t.len()).sum();
+                let tokens = total_chars / 4;
+                let cost = (tokens as f64 / 1000.0) * 0.00002;
+
+                (
+                    AiResult::Embeddings(result),
+                    AiRequestType::Embedding {
+                        model: config.embedding_model.clone(),
+                    },
+                    tokens,
+                    cost,
+                    cache_hit,
+                )
+            }
         };
 
         // Record the request
@@ -412,16 +469,47 @@ impl AiClient {
         self.service.conversation()
     }
 
+    /// Generate an embedding for a text string
+    pub async fn embed(&self, text: impl Into<String>) -> Result<Vec<f32>> {
+        match self
+            .execute(AiTask::GenerateEmbedding { text: text.into() })
+            .await?
+        {
+            AiResult::Embedding(vec) => Ok(vec),
+            _ => Err(anyhow::anyhow!(
+                "Unexpected result type from embedding task"
+            )),
+        }
+    }
+
+    /// Generate embeddings for multiple text strings
+    pub async fn embed_batch(&self, texts: Vec<String>) -> Result<Vec<Vec<f32>>> {
+        match self
+            .execute(AiTask::GenerateEmbeddingBatch { texts })
+            .await?
+        {
+            AiResult::Embeddings(vecs) => Ok(vecs),
+            _ => Err(anyhow::anyhow!(
+                "Unexpected result type from embedding batch task"
+            )),
+        }
+    }
+
     /// Start a streaming chat response
     pub async fn chat_stream(
         &self,
         conversation_id: &str,
         message: String,
     ) -> Result<impl Stream<Item = Result<String>>> {
-        self.service
-            .conversation()
-            .send_message_stream(conversation_id, message)
-            .await
+        let manager = self.service.conversation();
+        let conversation_id = conversation_id.to_string();
+        Ok(async_stream::try_stream! {
+            let stream = manager.send_message_stream(&conversation_id, message).await?;
+            futures::pin_mut!(stream);
+            while let Some(item) = stream.next().await {
+                yield item?;
+            }
+        })
     }
 
     /// Update configuration

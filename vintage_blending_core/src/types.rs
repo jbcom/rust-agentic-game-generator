@@ -38,31 +38,33 @@ impl FeatureVector {
         {
             let semantic_sim = self.cosine_similarity(embed_a, embed_b);
             // Mix semantic similarity with traditional features
-            let genre_sim = self.genre_similarity(&other.genre_weights);
-            let mech_sim = self.mechanic_similarity(&other.mechanic_flags);
+            let base_sim = self.base_similarity(other);
 
             // Weight semantic similarity heavily when available
-            semantic_sim * 0.6 + genre_sim * 0.2 + mech_sim * 0.2
+            semantic_sim * 0.6 + base_sim * 0.4
         } else {
-            // Fallback to traditional similarity calculation
-            let genre_sim = self.genre_similarity(&other.genre_weights);
-            let mech_sim = self.mechanic_similarity(&other.mechanic_flags);
-            let gen_sim =
-                1.0 - (self.platform_generation.abs_diff(other.platform_generation) as f32 / 5.0);
-            let complex_sim = 1.0 - (self.complexity - other.complexity).abs();
-            let action_sim =
-                1.0 - (self.action_strategy_balance - other.action_strategy_balance).abs() / 2.0;
-            let multi_sim =
-                1.0 - (self.single_multi_balance - other.single_multi_balance).abs() / 2.0;
-
-            // Weighted average
-            genre_sim * 0.3
-                + mech_sim * 0.3
-                + gen_sim * 0.1
-                + complex_sim * 0.1
-                + action_sim * 0.1
-                + multi_sim * 0.1
+            self.base_similarity(other)
         }
+    }
+
+    /// Calculate similarity based only on traditional features (no embeddings)
+    pub fn base_similarity(&self, other: &Self) -> f32 {
+        let genre_sim = self.genre_similarity(&other.genre_weights);
+        let mech_sim = self.mechanic_similarity(&other.mechanic_flags);
+        let gen_sim =
+            1.0 - (self.platform_generation.abs_diff(other.platform_generation) as f32 / 5.0);
+        let complex_sim = 1.0 - (self.complexity - other.complexity).abs();
+        let action_sim =
+            1.0 - (self.action_strategy_balance - other.action_strategy_balance).abs() / 2.0;
+        let multi_sim = 1.0 - (self.single_multi_balance - other.single_multi_balance).abs() / 2.0;
+
+        // Weighted average
+        genre_sim * 0.3
+            + mech_sim * 0.3
+            + gen_sim * 0.1
+            + complex_sim * 0.1
+            + action_sim * 0.1
+            + multi_sim * 0.1
     }
 
     fn genre_similarity(&self, other: &[f32]) -> f32 {

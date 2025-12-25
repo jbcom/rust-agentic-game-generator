@@ -34,11 +34,10 @@ impl GraphBuilder {
             if let Some(id) = game_id
                 && let Some(enriched) = enriched_map.get(&id)
             {
-                // Use embeddings for feature vector if available
-                if !enriched.theme_embeddings.is_empty() {
-                    // Use the theme embeddings directly
+                // Use the overall embedding for the feature vector
+                if !enriched.overall_embedding.is_empty() {
                     metadata.feature_vector.semantic_embedding =
-                        Some(enriched.theme_embeddings.clone());
+                        Some(enriched.overall_embedding.clone());
                 }
 
                 // Add enriched mechanic tags
@@ -610,6 +609,7 @@ impl GraphBuilder {
                     "mechanic_tags": m.mechanic_tags,
                     "genre_affinities": m.genre_affinities,
                     "mood_tags": m.mood_tags,
+                    "overall_embedding": m.feature_vector.semantic_embedding,
                 })
             }).collect::<Vec<_>>(),
         });

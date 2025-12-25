@@ -52,14 +52,15 @@ pub fn draw_list_ui(
                 ui.separator();
 
                 if ui.button("Edit").clicked()
-                    && let Some((uuid, _, path)) = state.projects.get(state.selected_index) {
-                        info!("Switching to edit mode for project: {}", uuid);
-                        // Send event to switch to Generate mode with this project
-                        switch_mode_events.write(SwitchModeEvent {
-                            new_mode: AppMode::Generate,
-                            project_path: Some(path.clone()),
-                        });
-                    }
+                    && let Some((uuid, _, path)) = state.projects.get(state.selected_index)
+                {
+                    info!("Switching to edit mode for project: {}", uuid);
+                    // Send event to switch to Generate mode with this project
+                    switch_mode_events.write(SwitchModeEvent {
+                        new_mode: AppMode::Generate,
+                        project_path: Some(path.clone()),
+                    });
+                }
 
                 ui.separator();
 
@@ -255,20 +256,21 @@ fn load_projects(
 
         // Try to parse as UUID
         if let Some(dir_name) = path.file_name().and_then(|n| n.to_str())
-            && let Ok(uuid) = Uuid::parse_str(dir_name) {
-                // Look for project.toml
-                let config_path = path.join("project.toml");
-                if config_path.exists() {
-                    match ProjectConfig::load(&config_path) {
-                        Ok(config) => {
-                            projects.push((uuid, config, config_path));
-                        }
-                        Err(e) => {
-                            warn!("Failed to load project config at {:?}: {}", config_path, e);
-                        }
+            && let Ok(uuid) = Uuid::parse_str(dir_name)
+        {
+            // Look for project.toml
+            let config_path = path.join("project.toml");
+            if config_path.exists() {
+                match ProjectConfig::load(&config_path) {
+                    Ok(config) => {
+                        projects.push((uuid, config, config_path));
+                    }
+                    Err(e) => {
+                        warn!("Failed to load project config at {:?}: {}", config_path, e);
                     }
                 }
             }
+        }
     }
 
     // Sort by project name

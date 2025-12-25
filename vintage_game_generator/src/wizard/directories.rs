@@ -65,21 +65,21 @@ impl AppDirectories {
 
                 // Check if it's a directory and looks like a UUID
                 if path.is_dir()
-                    && let Some(dir_name) = path.file_name() {
-                        let dir_str = dir_name.to_string_lossy();
-                        // Basic UUID format check (8-4-4-4-12 hex characters)
-                        if dir_str.len() == 36 && dir_str.chars().filter(|&c| c == '-').count() == 4
-                        {
-                            // Try to load the project name from project.toml
-                            let config_path = path.join("project.toml");
-                            let project_name = if config_path.exists() {
-                                Self::read_project_name(&config_path)
-                            } else {
-                                None
-                            };
-                            projects.push((path, project_name));
-                        }
+                    && let Some(dir_name) = path.file_name()
+                {
+                    let dir_str = dir_name.to_string_lossy();
+                    // Basic UUID format check (8-4-4-4-12 hex characters)
+                    if dir_str.len() == 36 && dir_str.chars().filter(|&c| c == '-').count() == 4 {
+                        // Try to load the project name from project.toml
+                        let config_path = path.join("project.toml");
+                        let project_name = if config_path.exists() {
+                            Self::read_project_name(&config_path)
+                        } else {
+                            None
+                        };
+                        projects.push((path, project_name));
                     }
+                }
             }
         }
 

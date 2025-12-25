@@ -153,7 +153,31 @@ impl AIAnalyzer {
             let response = self.send_analysis_request(&prompt).await?;
 
             // Parse the structured response
-            let enriched = self.parse_analysis_response(&response, games)?;
+            let mut enriched = self.parse_analysis_response(&response, games)?;
+
+            // Generate genuine embeddings for each game
+            for game in &mut enriched {
+                let combined_text = format!(
+                    "Name: {}\nYear: {}\nGenre: {}\nThemes: {}\nMechanics: {}\nNarrative: {}\nMood: {}\nDescription: {}",
+                    game.name,
+                    game.year,
+                    game.original_genre,
+                    game.themes.join(", "),
+                    game.mechanics
+                        .iter()
+                        .map(|m| &m.name)
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    game.narrative_elements.join(", "),
+                    game.mood_tags.join(", "),
+                    game.player_experience
+                );
+
+                if let Ok(embedding) = generate_embeddings(&combined_text, &self.ai_service).await {
+                    game.overall_embedding = embedding;
+                }
+            }
 
             Ok(enriched)
         })
@@ -422,12 +446,6 @@ impl AIAnalyzer {
             .unwrap_or("")
             .to_string();
 
-        // Extract embeddings
-        let theme_embeddings = self.extract_float_array(analysis, "theme_embeddings");
-        let mechanic_embeddings = self.extract_float_array(analysis, "mechanic_embeddings");
-        let narrative_embeddings = self.extract_float_array(analysis, "narrative_embeddings");
-        let overall_embedding = self.extract_float_array(analysis, "overall_embedding");
-
         Ok(EnrichedGameMetadata {
             id,
             name,
@@ -461,10 +479,10 @@ impl AIAnalyzer {
             progression_system,
             social_features,
             accessibility_notes,
-            theme_embeddings,
-            mechanic_embeddings,
-            narrative_embeddings,
-            overall_embedding,
+            theme_embeddings: Vec::new(),
+            mechanic_embeddings: Vec::new(),
+            narrative_embeddings: Vec::new(),
+            overall_embedding: Vec::new(),
         })
     }
 
@@ -475,18 +493,6 @@ impl AIAnalyzer {
                 arr.iter()
                     .filter_map(|v| v.as_str())
                     .map(|s| s.to_string())
-                    .collect()
-            })
-            .unwrap_or_default()
-    }
-
-    fn extract_float_array(&self, obj: &Value, key: &str) -> Vec<f32> {
-        obj.get(key)
-            .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_f64())
-                    .map(|f| f as f32)
                     .collect()
             })
             .unwrap_or_default()

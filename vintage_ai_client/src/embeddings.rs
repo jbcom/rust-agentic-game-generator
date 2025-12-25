@@ -13,7 +13,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use super::{
-    AiConfig,
+    AiConfig, AiGenerator,
     cache::{AiCache, CachedData},
     tokens::TokenCounter,
 };
@@ -24,6 +24,29 @@ pub struct EmbeddingsGenerator {
     client: Arc<Client<OpenAIConfig>>,
     cache: Arc<Mutex<AiCache>>,
     token_counter: Arc<Mutex<TokenCounter>>,
+}
+
+#[async_trait::async_trait]
+impl AiGenerator for EmbeddingsGenerator {
+    async fn estimate_tokens(&self, request: &str) -> Result<usize> {
+        // Embeddings use tiktoken for accurate count
+        let counter = self.token_counter.lock().await;
+        counter.count_tokens(request, "text-embedding-3-small")
+    }
+
+    async fn estimate_cost(&self, request: &str) -> Result<f64> {
+        let tokens = self.estimate_tokens(request).await?;
+        // text-embedding-3-small is $0.00002 / 1k tokens
+        Ok((tokens as f64 / 1000.0) * 0.00002)
+    }
+
+    async fn is_cached(&self, key: &str) -> bool {
+        self.cache.lock().await.get(key).await.is_some()
+    }
+
+    async fn clear_cache(&self, key: &str) -> Result<()> {
+        self.cache.lock().await.clear(key).await
+    }
 }
 
 impl EmbeddingsGenerator {
@@ -43,7 +66,7 @@ impl EmbeddingsGenerator {
     /// Generate embeddings for a single text
     pub async fn generate(&self, text: &str, config: &AiConfig) -> Result<Vec<f32>> {
         // Check cache first
-        let cache_key = format!("embedding:{}:{}", config.text_model, text);
+        let cache_key = format!("embedding:{}:{}", config.embedding_model, text);
 
         if let Some(cached) = self.cache.lock().await.get(&cache_key).await
             && let CachedData::Embedding(embedding) = cached.data
@@ -52,7 +75,7 @@ impl EmbeddingsGenerator {
         }
 
         // Determine embedding model based on config
-        let model = match config.text_model.as_str() {
+        let model = match config.embedding_model.as_str() {
             "text-embedding-3-small" => "text-embedding-3-small",
             "text-embedding-3-large" => "text-embedding-3-large",
             "text-embedding-ada-002" => "text-embedding-ada-002",
@@ -111,7 +134,7 @@ impl EmbeddingsGenerator {
         config: &AiConfig,
     ) -> Result<Vec<Vec<f32>>> {
         // OpenAI supports batch embedding requests
-        let model = match config.text_model.as_str() {
+        let model = match config.embedding_model.as_str() {
             "text-embedding-3-small" => "text-embedding-3-small",
             "text-embedding-3-large" => "text-embedding-3-large",
             "text-embedding-ada-002" => "text-embedding-ada-002",
@@ -143,7 +166,7 @@ impl EmbeddingsGenerator {
         // Cache individual results
         for (idx, text) in texts.iter().enumerate() {
             if let Some(embedding) = embeddings.get(idx) {
-                let cache_key = format!("embedding:{}:{}", config.text_model, text);
+                let cache_key = format!("embedding:{}:{}", config.embedding_model, text);
                 self.cache
                     .lock()
                     .await
