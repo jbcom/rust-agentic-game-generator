@@ -166,7 +166,8 @@ impl TextGenerator {
 
         // Check cache first
         if let Some(cached) = self.cache.lock().await.get(&cache_key).await
-            && let CachedData::Text(text) = cached.data {
+            && let CachedData::Text(text) = cached.data
+        {
             return Ok(text);
         }
 

@@ -11,7 +11,9 @@ use anyhow::{Context, Result};
 use async_openai::{
     Client,
     config::OpenAIConfig,
-    types::images::{CreateImageRequestArgs, ImageModel, ImageQuality, ImageResponseFormat, ImageSize, Image},
+    types::images::{
+        CreateImageRequestArgs, Image, ImageModel, ImageQuality, ImageResponseFormat, ImageSize,
+    },
 };
 use base64::Engine;
 use image::{DynamicImage, GenericImageView, Rgba, RgbaImage};
@@ -460,11 +462,9 @@ impl ImageGenerator {
 
         // The async-openai Image type is an enum with Url and B64Json variants
         let image_bytes = match image_data.as_ref() {
-            Image::B64Json { b64_json, .. } => {
-                base64::engine::general_purpose::STANDARD
-                    .decode(b64_json.as_ref())
-                    .context("Failed to decode base64 image data")?
-            }
+            Image::B64Json { b64_json, .. } => base64::engine::general_purpose::STANDARD
+                .decode(b64_json.as_ref())
+                .context("Failed to decode base64 image data")?,
             Image::Url { url, .. } => {
                 // If we got a URL instead, we need to fetch it
                 anyhow::bail!("Expected base64 data but got URL: {url}");
@@ -477,10 +477,7 @@ impl ImageGenerator {
             ImageQuality::HD => "hd",
             _ => "standard",
         };
-        let model_name = format!(
-            "dall-e-3-{}x{}-{}",
-            width, height, quality_str
-        );
+        let model_name = format!("dall-e-3-{}x{}-{}", width, height, quality_str);
 
         self.token_counter
             .lock()

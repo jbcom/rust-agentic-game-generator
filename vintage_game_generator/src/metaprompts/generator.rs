@@ -325,13 +325,15 @@ impl GameGenerator {
         if response.contains("\"title\"") && response.contains("\"genre\"") {
             // Try to extract and parse JSON - use safe string slicing
             if let Some(start) = response.find('{')
-                && let Some(end) = response.rfind('}') {
-                    // Use get() for safe UTF-8 string slicing to avoid panics
-                    if let Some(json_str) = response.get(start..=end)
-                        && let Ok(config) = serde_json::from_str::<GameConfig>(json_str) {
-                            return (true, Some(config));
-                        }
+                && let Some(end) = response.rfind('}')
+            {
+                // Use get() for safe UTF-8 string slicing to avoid panics
+                if let Some(json_str) = response.get(start..=end)
+                    && let Ok(config) = serde_json::from_str::<GameConfig>(json_str)
+                {
+                    return (true, Some(config));
                 }
+            }
         }
         (false, None)
     }

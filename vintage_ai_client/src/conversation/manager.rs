@@ -124,7 +124,7 @@ impl ConversationManager {
 
     /// Send a message and get a streaming response
     pub async fn send_message_stream(
-        &self,
+        self,
         conversation_id: &str,
         message: String,
     ) -> Result<impl Stream<Item = Result<String>>> {
@@ -215,7 +215,7 @@ impl ConversationManager {
 
     /// Send a message with custom configuration and get a streaming response
     pub async fn send_message_stream_with_config(
-        &self,
+        self,
         conversation_id: &str,
         message: String,
         config: Option<MessageConfig>,
@@ -247,15 +247,18 @@ impl ConversationManager {
             .stream(true)
             .build()?;
 
-        let mut stream = self.client.chat().create_stream(request).await?;
+        let client = self.client.clone();
+        let mut stream = client.chat().create_stream(request).await?;
 
         let conversation_id = conversation_id.to_string();
         let conversations_arc = self.conversations.clone();
-        let _token_counter = self.token_counter.clone();
+        let token_counter_arc = self.token_counter.clone();
         let _model_name = config.model.clone();
 
         Ok(async_stream::try_stream! {
             let mut full_response = String::new();
+            let _client = client; // Keep client alive for the stream
+            let _token_counter = token_counter_arc;
 
             while let Some(result) = stream.next().await {
                 match result {
