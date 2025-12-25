@@ -252,9 +252,10 @@ pub fn render_overlay_stack(ui: &mut egui::Ui, overlays: &mut [OverlayConfig]) -
             .interactable(overlay.block_interaction)
             .show(ui.ctx(), |ui| {
                 if let Some(id) = render_overlay(ui, overlay)
-                    && clicked_id.is_none() {
-                        clicked_id = Some(id);
-                    }
+                    && clicked_id.is_none()
+                {
+                    clicked_id = Some(id);
+                }
             });
     }
 
