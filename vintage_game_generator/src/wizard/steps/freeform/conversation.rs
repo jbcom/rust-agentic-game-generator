@@ -74,12 +74,12 @@ pub fn render_conversation(
             let response = ui.text_edit_multiline(&mut freeform_state.conversation.current_input);
 
             // Focus on the text input
-            if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                if !freeform_state.conversation.current_input.trim().is_empty()
-                    && !freeform_state.conversation.is_processing
-                {
-                    send_message(&mut freeform_state, &pipeline, stream_res.reborrow());
-                }
+            if response.lost_focus()
+                && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                && !freeform_state.conversation.current_input.trim().is_empty()
+                && !freeform_state.conversation.is_processing
+            {
+                send_message(&mut freeform_state, &pipeline, stream_res.reborrow());
             }
 
             ui.vertical(|ui| {
@@ -89,12 +89,10 @@ pub fn render_conversation(
                         freeform_state.conversation.is_streaming = false;
                         stream_res.receiver = None;
                     }
-                } else {
-                    if ui.button("Send").clicked()
-                        && !freeform_state.conversation.current_input.trim().is_empty()
-                    {
-                        send_message(&mut freeform_state, &pipeline, stream_res.reborrow());
-                    }
+                } else if ui.button("Send").clicked()
+                    && !freeform_state.conversation.current_input.trim().is_empty()
+                {
+                    send_message(&mut freeform_state, &pipeline, stream_res.reborrow());
                 }
 
                 if ui.button("Export").clicked() {
@@ -182,44 +180,42 @@ fn send_message(
         let generator_lock = generator_arc.lock().await;
         if let Some(generator) = generator_lock.as_ref() {
             // Start or continue conversation
-            let result = if let Some(id) = &conversation_id {
-                generator
-                    .continue_game_design_conversation_stream(id, &message)
-                    .await
-            } else {
-                // If no conversation ID, start a new one
-                match generator.start_game_design_conversation(&message).await {
-                    Ok((id, initial_response)) => {
-                        // This is a bit complex because we already added the user message.
-                        // For simplicity, we'll just use the stream for subsequent messages.
-                        // But since we need a stream, let's just use a dummy id for now
-                        // or better, fix GameGenerator to have a proper start_stream.
-                        generator
-                            .continue_game_design_conversation_stream(&id, "")
-                            .await
-                    }
-                    Err(e) => Err(e),
-                }
-            };
-
-            match result {
-                Ok(mut stream) => {
-                    futures::pin_mut!(stream);
-                    while let Some(token_result) = stream.next().await {
-                        match token_result {
-                            Ok(token) => {
-                                let _ = tx.send(ConversationStreamEvent::Token(token));
-                            }
-                            Err(e) => {
-                                let _ = tx.send(ConversationStreamEvent::Error(e.to_string()));
-                                break;
+            if let Some(conversation_id_ref) = &conversation_id {
+                let result = generator
+                    .continue_game_design_conversation_stream(conversation_id_ref, &message)
+                    .await;
+                
+                match result {
+                    Ok(stream) => {
+                        futures::pin_mut!(stream);
+                        while let Some(token_result) = stream.next().await {
+                            match token_result {
+                                Ok(token) => {
+                                    let _ = tx.send(ConversationStreamEvent::Token(token));
+                                }
+                                Err(e) => {
+                                    let _ = tx.send(ConversationStreamEvent::Error(e.to_string()));
+                                    break;
+                                }
                             }
                         }
+                        let _ = tx.send(ConversationStreamEvent::Finished);
                     }
-                    let _ = tx.send(ConversationStreamEvent::Finished);
+                    Err(e) => {
+                        let _ = tx.send(ConversationStreamEvent::Error(e.to_string()));
+                    }
                 }
-                Err(e) => {
-                    let _ = tx.send(ConversationStreamEvent::Error(e.to_string()));
+            } else {
+                // If no conversation ID, start a new one first
+                match generator.start_game_design_conversation(&message).await {
+                    Ok((_new_id, initial_response)) => {
+                        // Send the initial response
+                        let _ = tx.send(ConversationStreamEvent::Token(initial_response));
+                        let _ = tx.send(ConversationStreamEvent::Finished);
+                    }
+                    Err(e) => {
+                        let _ = tx.send(ConversationStreamEvent::Error(e.to_string()));
+                    }
                 }
             }
         } else {
@@ -235,11 +231,12 @@ pub fn process_conversation_stream(
     mut freeform_state: ResMut<FreeformModeState>,
     mut stream_res: ResMut<ConversationStream>,
 ) {
-    let Some(rx) = &mut stream_res.receiver else {
-        return;
+    let receiver_ref = match &mut stream_res.receiver {
+        Some(rx) => rx,
+        None => return,
     };
 
-    while let Ok(event) = rx.try_recv() {
+    while let Ok(event) = receiver_ref.try_recv() {
         match event {
             ConversationStreamEvent::Token(token) => {
                 // If the last message is from Assistant and we are streaming, append to it
@@ -269,15 +266,15 @@ pub fn process_conversation_stream(
             ConversationStreamEvent::Finished => {
                 freeform_state.conversation.is_processing = false;
                 freeform_state.conversation.is_streaming = false;
-                drop(rx);
                 stream_res.receiver = None;
+                return;
             }
             ConversationStreamEvent::Error(e) => {
                 freeform_state.conversation.error_message = Some(e);
                 freeform_state.conversation.is_processing = false;
                 freeform_state.conversation.is_streaming = false;
-                drop(rx);
                 stream_res.receiver = None;
+                return;
             }
         }
     }

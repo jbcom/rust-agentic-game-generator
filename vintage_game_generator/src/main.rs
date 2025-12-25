@@ -90,6 +90,7 @@ fn create_ai_config(args: &Args) -> AiConfig {
         text_model: args.text_model.clone(),
         image_model: args.image_model.clone(),
         audio_model: args.audio_model.clone(),
+        embedding_model: "text-embedding-3-small".to_string(),
 
         // Generation Parameters
         temperature: args.temperature,
