@@ -27,8 +27,6 @@ use super::types::*;
 #[derive(Clone)]
 pub struct ConversationManager {
     pub(crate) client: Arc<Client<OpenAIConfig>>,
-    #[allow(dead_code)]
-    pub(crate) cache: Arc<Mutex<AiCache>>,
     pub(crate) token_counter: Arc<Mutex<TokenCounter>>,
     pub(crate) conversations: Arc<Mutex<HashMap<String, Conversation>>>,
     pub(crate) template_env: Arc<Mutex<Option<Environment<'static>>>>,
@@ -39,12 +37,10 @@ impl ConversationManager {
     /// Create a new conversation manager
     pub fn new(
         client: Arc<Client<OpenAIConfig>>,
-        cache: Arc<Mutex<AiCache>>,
         token_counter: Arc<Mutex<TokenCounter>>,
     ) -> Self {
         Self {
             client,
-            cache,
             token_counter,
             conversations: Arc::new(Mutex::new(HashMap::new())),
             template_env: Arc::new(Mutex::new(None)),

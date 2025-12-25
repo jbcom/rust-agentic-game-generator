@@ -89,7 +89,6 @@ impl AiService {
     pub fn conversation(&self) -> conversation::ConversationManager {
         conversation::ConversationManager::new(
             self.client.clone(),
-            self.cache.clone(),
             self.token_counter.clone(),
         )
     }

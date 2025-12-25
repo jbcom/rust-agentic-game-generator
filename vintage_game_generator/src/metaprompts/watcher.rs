@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
 
-#[allow(dead_code)]
 pub struct PromptWatcher {
     _config_watcher: Option<RecommendedWatcher>,
     _prompts_watcher: Option<RecommendedWatcher>,

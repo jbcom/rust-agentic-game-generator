@@ -63,10 +63,8 @@ pub struct GameMechanic {
     pub innovation_level: f32, // 0.0 to 1.0
 }
 
-#[allow(dead_code)]
 pub struct AIAnalyzer {
     bpe: CoreBPE,
-    ai_service: AiService,
     text_generator: TextGenerator,
 }
 
@@ -89,7 +87,6 @@ impl AIAnalyzer {
         let text_generator = ai_service.text();
         Ok(Self {
             bpe,
-            ai_service,
             text_generator,
         })
     }
