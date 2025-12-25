@@ -184,7 +184,7 @@ fn send_message(
                 let result = generator
                     .continue_game_design_conversation_stream(conversation_id_ref, &message)
                     .await;
-                
+
                 match result {
                     Ok(stream) => {
                         futures::pin_mut!(stream);
