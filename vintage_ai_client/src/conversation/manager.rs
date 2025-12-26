@@ -253,12 +253,11 @@ impl ConversationManager {
             while let Some(result) = stream.next().await {
                 match result {
                     Ok(response) => {
-                        if let Some(choice) = response.choices.first() {
-                            if let Some(content) = &choice.delta.content {
+                        if let Some(choice) = response.choices.first()
+                            && let Some(content) = &choice.delta.content {
                                 full_response.push_str(content);
                                 yield content.clone();
                             }
-                        }
                     }
                     Err(e) => {
                         Err(anyhow::anyhow!("Stream error: {}", e))?;
