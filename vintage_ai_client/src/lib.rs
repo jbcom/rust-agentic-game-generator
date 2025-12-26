@@ -87,11 +87,7 @@ impl AiService {
 
     /// Get a reference to the conversation service
     pub fn conversation(&self) -> conversation::ConversationManager {
-        conversation::ConversationManager::new(
-            self.client.clone(),
-            self.cache.clone(),
-            self.token_counter.clone(),
-        )
+        conversation::ConversationManager::new(self.client.clone(), self.token_counter.clone())
     }
 
     /// Get a reference to the embeddings service
@@ -221,11 +217,6 @@ impl AiConfig {
 
     pub fn with_audio_model(mut self, model: impl Into<String>) -> Self {
         self.audio_model = model.into();
-        self
-    }
-
-    pub fn with_embedding_model(mut self, model: impl Into<String>) -> Self {
-        self.embedding_model = model.into();
         self
     }
 

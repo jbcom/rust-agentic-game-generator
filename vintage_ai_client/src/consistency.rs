@@ -16,12 +16,6 @@ use tokio::sync::Mutex;
 pub struct StyleManager {
     /// Current style configuration
     style_config: Arc<Mutex<StyleConfig>>,
-    /// Color palettes by theme
-    #[allow(dead_code)]
-    palettes: Arc<Mutex<HashMap<String, ColorPalette>>>,
-    /// Style embeddings for consistency
-    #[allow(dead_code)]
-    embeddings: Arc<Mutex<HashMap<String, Vec<f32>>>>,
     /// Template engine for prompts
     template_engine: Arc<Environment<'static>>,
 }
@@ -200,8 +194,6 @@ impl StyleManager {
 
         Self {
             style_config: Arc::new(Mutex::new(default_config)),
-            palettes: Arc::new(Mutex::new(Self::default_palettes())),
-            embeddings: Arc::new(Mutex::new(HashMap::new())),
             template_engine: Arc::new(env),
         }
     }
@@ -553,69 +545,6 @@ impl StyleManager {
             Perspective::Isometric => "isometric view",
             Perspective::SideScroller => "side-scrolling view",
         }
-    }
-
-    /// Get default color palettes
-    fn default_palettes() -> HashMap<String, ColorPalette> {
-        let mut palettes = HashMap::new();
-
-        // SNES-style palette
-        palettes.insert(
-            "snes_fantasy".to_string(),
-            ColorPalette {
-                name: "SNES Fantasy".to_string(),
-                primary_colors: vec![
-                    Color::new(34, 32, 52),  // Dark purple
-                    Color::new(69, 40, 60),  // Purple
-                    Color::new(102, 57, 49), // Brown
-                    Color::new(143, 86, 59), // Light brown
-                ],
-                secondary_colors: vec![
-                    Color::new(223, 113, 38),  // Orange
-                    Color::new(217, 160, 102), // Light orange
-                    Color::new(238, 195, 154), // Peach
-                    Color::new(251, 242, 54),  // Yellow
-                ],
-                accent_colors: vec![
-                    Color::new(153, 229, 80), // Green
-                    Color::new(106, 190, 48), // Dark green
-                    Color::new(55, 148, 110), // Teal
-                    Color::new(75, 105, 47),  // Forest
-                ],
-                transparency_color: Color::transparent(),
-                max_colors: 16,
-            },
-        );
-
-        // Genesis/Mega Drive palette
-        palettes.insert(
-            "genesis_action".to_string(),
-            ColorPalette {
-                name: "Genesis Action".to_string(),
-                primary_colors: vec![
-                    Color::new(0, 0, 0),     // Black
-                    Color::new(29, 43, 83),  // Dark blue
-                    Color::new(126, 37, 83), // Dark red
-                    Color::new(0, 135, 81),  // Dark green
-                ],
-                secondary_colors: vec![
-                    Color::new(171, 82, 54),   // Brown
-                    Color::new(95, 87, 79),    // Gray
-                    Color::new(194, 195, 199), // Light gray
-                    Color::new(255, 241, 232), // White
-                ],
-                accent_colors: vec![
-                    Color::new(255, 0, 77),   // Red
-                    Color::new(255, 163, 0),  // Orange
-                    Color::new(255, 236, 39), // Yellow
-                    Color::new(0, 228, 54),   // Green
-                ],
-                transparency_color: Color::transparent(),
-                max_colors: 16,
-            },
-        );
-
-        palettes
     }
 }
 

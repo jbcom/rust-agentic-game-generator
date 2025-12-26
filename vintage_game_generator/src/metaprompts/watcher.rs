@@ -5,11 +5,10 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
 
-#[allow(dead_code)]
 pub struct PromptWatcher {
-    config_watcher: Option<RecommendedWatcher>,
-    prompts_watcher: Option<RecommendedWatcher>,
-    build_watcher: Option<RecommendedWatcher>,
+    _config_watcher: Option<RecommendedWatcher>,
+    _prompts_watcher: Option<RecommendedWatcher>,
+    _build_watcher: Option<RecommendedWatcher>,
     config_rx: Receiver<notify::Result<Event>>,
     prompts_rx: Receiver<notify::Result<Event>>,
     build_rx: Receiver<notify::Result<Event>>,
@@ -35,9 +34,9 @@ impl PromptWatcher {
         build_watcher.watch(&build_dir, RecursiveMode::Recursive)?;
 
         Ok(Self {
-            config_watcher: Some(config_watcher),
-            prompts_watcher: Some(prompts_watcher),
-            build_watcher: Some(build_watcher),
+            _config_watcher: Some(config_watcher),
+            _prompts_watcher: Some(prompts_watcher),
+            _build_watcher: Some(build_watcher),
             config_rx,
             prompts_rx,
             build_rx,
