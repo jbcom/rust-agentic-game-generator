@@ -1,8 +1,8 @@
 use crate::wizard::pipeline::GenerationPipeline;
 use crate::wizard::{
-    AppDirectories, AppMode, SwitchModeEvent,
+    AppDirectories, SwitchModeEvent,
     config::ConfigManager,
-    state::{AppState, GenerationStatus, LogLevel, WizardStep},
+    state::{AppState, LogLevel, WizardStep},
     steps::{
         draw_welcome_step,
         freeform::{

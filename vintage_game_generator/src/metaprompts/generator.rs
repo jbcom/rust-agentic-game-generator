@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 use crate::wizard::config::ProjectConfig;
 use futures::{Stream, StreamExt};
