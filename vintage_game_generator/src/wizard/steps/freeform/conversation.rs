@@ -187,13 +187,11 @@ fn send_message(
             } else {
                 // If no conversation ID, start a new one
                 match generator.start_game_design_conversation(&message).await {
-                    Ok((id, _initial_response)) => {
-                        // This is a bit complex because we already added the user message.
-                        // For simplicity, we'll just use the stream for subsequent messages.
-                        // But since we need a stream, let's just use a dummy id for now
-                        // or better, fix GameGenerator to have a proper start_stream.
+                    Ok((new_id, _initial_response)) => {
+                        // Clone the new_id to avoid lifetime issues
+                        let id_clone = new_id.clone();
                         generator
-                            .continue_game_design_conversation_stream(&id, "")
+                            .continue_game_design_conversation_stream(&id_clone, "")
                             .await
                     }
                     Err(e) => Err(e),
