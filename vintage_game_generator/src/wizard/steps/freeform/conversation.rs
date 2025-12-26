@@ -182,7 +182,7 @@ fn send_message(
             // Start or continue conversation
             let result = if let Some(id) = &conversation_id {
                 generator
-                    .continue_game_design_conversation_stream(id.clone(), message)
+                    .continue_game_design_conversation_stream(&id, &message)
                     .await
             } else {
                 // If no conversation ID, start a new one
@@ -193,7 +193,7 @@ fn send_message(
                         // But since we need a stream, let's just use a dummy id for now
                         // or better, fix GameGenerator to have a proper start_stream.
                         generator
-                            .continue_game_design_conversation_stream(id, "".to_string())
+                            .continue_game_design_conversation_stream(&id, "")
                             .await
                     }
                     Err(e) => Err(e),

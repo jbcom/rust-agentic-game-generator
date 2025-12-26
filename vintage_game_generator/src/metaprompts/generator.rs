@@ -152,7 +152,7 @@ impl GameGenerator {
     ) -> anyhow::Result<impl Stream<Item = anyhow::Result<String>>> {
         let conversation_manager = self.ai_service.conversation();
         conversation_manager
-            .send_message_stream(conversation_id, user_input.to_string())
+            .send_message_stream(&conversation_id, user_input.to_string())
             .await
             .map_err(|e| anyhow::anyhow!("Failed to start conversation stream: {}", e))
     }
