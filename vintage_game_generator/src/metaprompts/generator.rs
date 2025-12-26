@@ -147,12 +147,12 @@ impl GameGenerator {
     /// Continue game design conversation with streaming
     pub async fn continue_game_design_conversation_stream(
         &self,
-        conversation_id: String,
-        user_input: String,
+        conversation_id: &str,
+        user_input: &str,
     ) -> anyhow::Result<impl Stream<Item = anyhow::Result<String>>> {
         let conversation_manager = self.ai_service.conversation();
         conversation_manager
-            .send_message_stream(conversation_id, user_input)
+            .send_message_stream(conversation_id, user_input.to_string())
             .await
             .map_err(|e| anyhow::anyhow!("Failed to start conversation stream: {}", e))
     }
