@@ -19,7 +19,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::{AiGenerator, cache::AiCache, tokens::TokenCounter};
+use crate::{AiGenerator, tokens::TokenCounter};
 
 use super::types::*;
 
@@ -27,8 +27,6 @@ use super::types::*;
 #[derive(Clone)]
 pub struct ConversationManager {
     pub(crate) client: Arc<Client<OpenAIConfig>>,
-    #[allow(dead_code)]
-    pub(crate) cache: Arc<Mutex<AiCache>>,
     pub(crate) token_counter: Arc<Mutex<TokenCounter>>,
     pub(crate) conversations: Arc<Mutex<HashMap<String, Conversation>>>,
     pub(crate) template_env: Arc<Mutex<Option<Environment<'static>>>>,
@@ -37,14 +35,9 @@ pub struct ConversationManager {
 
 impl ConversationManager {
     /// Create a new conversation manager
-    pub fn new(
-        client: Arc<Client<OpenAIConfig>>,
-        cache: Arc<Mutex<AiCache>>,
-        token_counter: Arc<Mutex<TokenCounter>>,
-    ) -> Self {
+    pub fn new(client: Arc<Client<OpenAIConfig>>, token_counter: Arc<Mutex<TokenCounter>>) -> Self {
         Self {
             client,
-            cache,
             token_counter,
             conversations: Arc::new(Mutex::new(HashMap::new())),
             template_env: Arc::new(Mutex::new(None)),
@@ -127,7 +120,7 @@ impl ConversationManager {
         &self,
         conversation_id: &str,
         message: String,
-    ) -> Result<impl Stream<Item = Result<String>>> {
+    ) -> Result<impl Stream<Item = Result<String>> + use<'_>> {
         self.send_message_stream_with_config(conversation_id, message, None)
             .await
     }
@@ -219,7 +212,7 @@ impl ConversationManager {
         conversation_id: &str,
         message: String,
         config: Option<MessageConfig>,
-    ) -> Result<impl Stream<Item = Result<String>>> {
+    ) -> Result<impl Stream<Item = Result<String>> + use<'_>> {
         let mut conversations = self.conversations.lock().await;
         let conversation = conversations
             .get_mut(conversation_id)
@@ -261,11 +254,10 @@ impl ConversationManager {
                 match result {
                     Ok(response) => {
                         if let Some(choice) = response.choices.first()
-                            && let Some(content) = &choice.delta.content
-                        {
-                            full_response.push_str(content);
-                            yield content.clone();
-                        }
+                            && let Some(content) = &choice.delta.content {
+                                full_response.push_str(content);
+                                yield content.clone();
+                            }
                     }
                     Err(e) => {
                         Err(anyhow::anyhow!("Stream error: {}", e))?;

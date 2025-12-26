@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 use crate::wizard::config::ProjectConfig;
 use futures::{Stream, StreamExt};
@@ -70,18 +69,15 @@ impl ConversationState {
 
 pub struct GameGenerator {
     ai_service: AiService,
-    #[allow(dead_code)]
-    templates_dir: PathBuf,
     project_config: Option<ProjectConfig>,
 }
 
 impl GameGenerator {
-    pub async fn new(templates_dir: PathBuf) -> anyhow::Result<Self> {
+    pub async fn new() -> anyhow::Result<Self> {
         let ai_service = AiService::from_env()?;
 
         Ok(Self {
             ai_service,
-            templates_dir,
             project_config: None,
         })
     }
@@ -149,13 +145,15 @@ impl GameGenerator {
         &self,
         conversation_id: &str,
         user_input: &str,
-    ) -> anyhow::Result<impl Stream<Item = anyhow::Result<String>>> {
-        let manager = self.ai_service.conversation();
+    ) -> anyhow::Result<impl Stream<Item = anyhow::Result<String>> + use<'_>> {
+        let conversation_manager = self.ai_service.conversation();
         let conversation_id = conversation_id.to_string();
         let user_input = user_input.to_string();
 
         Ok(async_stream::try_stream! {
-            let stream = manager.send_message_stream(&conversation_id, user_input).await?;
+            let stream = conversation_manager
+                .send_message_stream(&conversation_id, user_input)
+                .await?;
             futures::pin_mut!(stream);
             while let Some(item) = stream.next().await {
                 yield item?;

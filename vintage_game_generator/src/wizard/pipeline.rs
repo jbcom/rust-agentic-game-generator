@@ -59,13 +59,12 @@ impl GenerationPipeline {
     pub fn initialize_generator(
         &self,
         _api_key: String,
-        directories: &AppDirectories,
+        _directories: &AppDirectories,
     ) -> Result<()> {
-        let prompts_dir = directories.prompts_dir.clone();
         let generator_arc = self.generator.clone();
 
         self.runtime.block_on(async move {
-            let new_generator = GameGenerator::new(prompts_dir).await?;
+            let new_generator = GameGenerator::new().await?;
             let mut generator_lock = generator_arc.lock().await;
             *generator_lock = Some(new_generator);
             Ok::<(), anyhow::Error>(())
